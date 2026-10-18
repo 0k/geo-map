@@ -1,0 +1,46 @@
+# @0k/geo-map
+
+Reusable, framework-free TypeScript map widget (Leaflet 1.9.4, exact-pinned
+and bundled) that shows KMZ / KML / GPX / GeoJSON tracks and places over
+free OpenStreetMap-based basemaps.  Hosts own fetching, authorisation,
+description rendering (sanitised HTML) and theme; the package owns
+parsing, Leaflet, layout, popups, the item list and teardown.
+
+## Blocking rules
+
+- The package never sees a URL, a file path, or a transport for the DATA.
+  Every byte of the file comes through `GeoMapHost.loadFile`.  The only
+  network traffic the widget may cause is basemap tiles.
+- NEVER fetch the icons or images a KML references (Google-hosted icon
+  URLs): markers are drawn as SVG.  Descriptions go through
+  `host.renderDescription`, which must return SAFE HTML; without it they
+  are shown as plain text.
+- Basemaps are free sources only (OpenStreetMap data and community tile
+  services).  Every preset keeps its attribution visible, its native
+  `maxZoom`, and HTTPS.  Never add prefetching, bulk download, or a tile
+  URL from a proprietary provider (Google, Bing, Mapbox, Esri, HERE...);
+  `test/basemaps.spec.ts` enforces this.
+- Leaflet, `@tmcw/togeojson` and `fflate` stay pinned EXACTLY and bundled,
+  hence `devDependencies`: a consumer installs nothing else and there is
+  no peer dependency.  The build target is `chrome91` and
+  `npm run check:chrome91` audits the emitted bundle (Android WebView 91).
+- KMZ inflation is bounded (`maxUncompressedBytes`) BEFORE inflating.
+- Every widget style hangs from `.gm-root`; colours are `--gm-*` variables
+  declared on `.gm-root`.  Leaflet's own stylesheet is bundled verbatim.
+- Teardown (`destroy()`) is idempotent and releases the fetch, the Leaflet
+  map, observers, listeners and the full-screen portal.
+- Tests use the synthetic fixtures in `test/fixtures/` only; never commit
+  real personal tracks.
+- Verify with `npm run check` (unit tests, typecheck, build, Chrome 91
+  audit, demo build, real-Chrome acceptance with tiles stubbed); produce
+  the tarball with `npm run pack`; deliver with `npm run vendor`.  Do not
+  commit into consumer repositories from this package.
+
+## Delivery
+
+No registry.  Consumers install a committed tarball
+(`vendor/0k-geo-map-<version>.tgz`, `file:` dependency).  To SHIP a
+reviewed change: bump the version here, run `npm run vendor`, then review
+and commit the resulting diff in each consumer.  `npm run try` overlays the
+working-tree build onto each consumer's `node_modules` to review an
+uncommitted change in the real host without a version bump.

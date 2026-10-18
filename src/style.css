@@ -1,0 +1,51 @@
+/* @0k/geo-map — every widget rule hangs from `.gm-root` (the element given
+   to createGeoMap).  Colours are `--gm-*` variables declared on the root so
+   a host maps its own theme by overriding them.  Leaflet's own stylesheet
+   (`.leaflet-*`) is bundled verbatim alongside. */
+:where(.gm-root){--gm-inset-top:env(safe-area-inset-top,0px);--gm-inset-right:env(safe-area-inset-right,0px);--gm-inset-bottom:env(safe-area-inset-bottom,0px);--gm-inset-left:env(safe-area-inset-left,0px)}
+.gm-root{--gm-surface:#0d1117;--gm-text:#e0e0e0;--gm-muted:rgba(224,224,224,0.65);--gm-border:rgba(128,128,128,0.25);--gm-btn-bg:rgba(30,30,30,0.75);--gm-btn-fg:rgba(224,224,224,0.85);--gm-btn-hover:rgba(80,80,80,0.85);--gm-btn-active:rgba(110,110,110,0.95);--gm-btn-size:28px;--gm-track:#e3443a;--gm-area:#3f8fd8;--gm-place:#2f7fe0;--gm-start:#2ea043;--gm-end:#d73a49;--gm-map-height:360px;--gm-popup-bg:#fff;--gm-popup-fg:#1d1d1d}
+.gm-root[data-open='1']{display:block;box-sizing:border-box;border:1px solid var(--gm-border);border-radius:8px;padding:6px;background:rgba(255,255,255,0.02);color:var(--gm-text)}
+.gm-root .gm-toolbar{display:flex;align-items:center;gap:0.5em;margin-bottom:6px;flex-wrap:wrap}
+.gm-root .gm-title{display:inline-flex;align-items:baseline;gap:0.6em;min-width:0;flex:1 1 auto}
+.gm-root .gm-title-label{font-weight:600;font-size:1.05em;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.gm-root .gm-summary{opacity:0.7;font-size:0.9em;white-space:nowrap}
+.gm-root .gm-controls{display:inline-flex;align-items:center;gap:0.25rem;margin-left:auto}
+.gm-root .gm-controls button,.gm-root .gm-status button{display:inline-flex;align-items:center;justify-content:center;min-width:var(--gm-btn-size);height:var(--gm-btn-size);padding:0 0.4em;color:var(--gm-btn-fg);background:var(--gm-btn-bg);border:none;border-radius:6px;font:inherit;font-size:0.85rem;line-height:1;cursor:pointer;-webkit-tap-highlight-color:transparent}
+.gm-root .gm-controls button:hover,.gm-root .gm-status button:hover{color:#fff;background:var(--gm-btn-hover)}
+.gm-root .gm-controls button[data-active]{color:#fff;background:var(--gm-btn-active)}
+.gm-root .gm-basemap{height:var(--gm-btn-size);color:var(--gm-btn-fg);background:var(--gm-btn-bg);border:1px solid var(--gm-btn-hover);border-radius:6px;font:inherit;font-size:0.8rem;padding:0 0.3em}
+.gm-root[data-layout='full'] .gm-wide{display:none}
+.gm-root .gm-map{height:var(--gm-map-height);border-radius:6px;overflow:hidden;background:#dcdcdc}
+.gm-root .gm-status{display:flex;align-items:center;gap:0.5em;padding:0.4em 0.2em;opacity:0.85}
+.gm-root .gm-status-text{flex:1 1 auto}
+.gm-root .gm-status[data-state='error'] .gm-status-text{color:#f08c8c}
+.gm-root .gm-legend{margin-top:6px;font-size:0.9em}
+.gm-root .gm-legend-summary{cursor:pointer;opacity:0.75;padding:0.15em 0}
+.gm-root .gm-list{list-style:none;margin:4px 0 0;padding:0;display:flex;flex-direction:column;gap:2px}
+.gm-root .gm-item{display:flex;width:100%;align-items:baseline;gap:0.75em;padding:0.3em 0.5em;text-align:left;color:var(--gm-text);background:transparent;border:0;border-radius:6px;font:inherit;cursor:pointer}
+.gm-root .gm-item:hover{background:var(--gm-btn-bg)}
+.gm-root .gm-item::before{content:'';flex:0 0 auto;width:0.7em;height:0.7em;border-radius:50%;background:var(--gm-place);align-self:center}
+.gm-root .gm-item-track::before{border-radius:2px;height:0.25em;background:var(--gm-track)}
+.gm-root .gm-item-area::before{border-radius:2px;background:var(--gm-area)}
+.gm-root .gm-item-name{flex:1 1 auto;min-width:0;overflow-wrap:anywhere}
+.gm-root .gm-item-meta{flex:0 0 auto;color:var(--gm-muted);font-size:0.9em;white-space:nowrap}
+/* Path colours: the file's own colour wins (`gm-styled`), otherwise the theme. */
+.gm-root path.gm-track:not(.gm-styled){stroke:var(--gm-track)}
+.gm-root path.gm-area:not(.gm-styled){stroke:var(--gm-area);fill:var(--gm-area)}
+.gm-root path.gm-place:not(.gm-styled){stroke:#fff;fill:var(--gm-place)}
+.gm-root path.gm-place.gm-styled{stroke:#fff}
+.gm-root path.gm-start{stroke:#fff;fill:var(--gm-start)}
+.gm-root path.gm-end{stroke:#fff;fill:var(--gm-end)}
+.gm-root .leaflet-popup-content-wrapper,.gm-root .leaflet-popup-tip{background:var(--gm-popup-bg);color:var(--gm-popup-fg)}
+.gm-root .gm-popup-name{font-weight:600;margin-bottom:2px}
+.gm-root .gm-popup-meta{opacity:0.7;font-size:0.9em;margin-bottom:4px}
+.gm-root .gm-popup-desc{max-height:40vh;overflow:auto;overflow-wrap:anywhere}
+.gm-root .gm-popup-desc img{max-width:100%}
+.gm-root .leaflet-control-attribution{font-size:10px}
+/* Wide: the transcript column's full width (geometry set by the widget). */
+.gm-root[data-layout='wide']{position:relative;z-index:3;max-width:none;background:var(--gm-surface)}
+/* Full screen: a fixed overlay portalled out of the host's stacking contexts. */
+.gm-root[data-layout='full']{position:fixed;inset:0;z-index:10000;margin:0;max-width:none;width:auto;height:100vh;border:0;border-radius:0;padding:calc(8px + var(--gm-inset-top)) calc(10px + var(--gm-inset-right)) calc(8px + var(--gm-inset-bottom)) calc(10px + var(--gm-inset-left));background:var(--gm-surface);display:flex;flex-direction:column;overflow:hidden}
+.gm-root[data-layout='full'] .gm-map{flex:1 1 0;height:auto;min-height:0}
+.gm-root[data-layout='full'] .gm-legend{flex:0 0 auto;max-height:35vh;overflow:auto}
+body.gm-fullscreen-open{overflow:hidden}

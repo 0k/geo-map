@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<kml xmlns="http://www.opengis.net/kml/2.2" xmlns:gx="http://www.google.com/kml/ext/2.2">
+<Document>
+<name><![CDATA[Synthetic Ridge Loop]]></name>
+<Style id="track"><LineStyle><color>7f0000ff</color><width>4</width></LineStyle>
+<IconStyle><Icon><href>http://earth.google.com/images/kml-icons/track-directional/track-0.png</href></Icon></IconStyle></Style>
+<Style id="start"><IconStyle><Icon><href>http://maps.google.com/mapfiles/kml/paddle/grn-circle.png</href></Icon></IconStyle></Style>
+<Placemark>
+<name><![CDATA[Synthetic Ridge Loop (Start)]]></name>
+<TimeStamp><when>2020-05-17T06:00:09Z</when></TimeStamp>
+<styleUrl>#start</styleUrl>
+<Point><coordinates>10.0,45.0,300</coordinates></Point>
+</Placemark>
+<Placemark id="tour">
+<name><![CDATA[Synthetic Ridge Loop]]></name>
+<description><![CDATA[Walk *along* the ridge]]></description>
+<styleUrl>#track</styleUrl>
+<gx:MultiTrack>
+<altitudeMode>absolute</altitudeMode>
+<gx:Track>
+<when>2020-05-17T06:00:09Z</when>
+<when>2020-05-17T06:30:09Z</when>
+<when>2020-05-17T07:00:09Z</when>
+<gx:coord>10.0 45.0 300</gx:coord>
+<gx:coord>10.0 45.01 320</gx:coord>
+<gx:coord>10.01 45.01 340</gx:coord>
+</gx:Track>
+</gx:MultiTrack>
+</Placemark>
+<Placemark>
+<name><![CDATA[Synthetic Ridge Loop (End)]]></name>
+<Point><coordinates>10.01,45.01,340</coordinates></Point>
+</Placemark>
+</Document>
+</kml>

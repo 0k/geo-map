@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<kml xmlns="http://www.opengis.net/kml/2.2">
+  <Document>
+    <name>Synthetic Trip</name>
+    <description>sample places</description>
+    <Style id="icon-22-normal"><IconStyle><Icon><href>https://www.gstatic.com/mapspro/images/stock/22-blue-dot.png</href></Icon></IconStyle></Style>
+    <Style id="icon-22-highlight"><IconStyle><Icon><href>https://www.gstatic.com/mapspro/images/stock/22-blue-dot.png</href></Icon></IconStyle></Style>
+    <StyleMap id="icon-22">
+      <Pair><key>normal</key><styleUrl>#icon-22-normal</styleUrl></Pair>
+      <Pair><key>highlight</key><styleUrl>#icon-22-highlight</styleUrl></Pair>
+    </StyleMap>
+    <Folder>
+      <name>Untitled layer</name>
+      <Placemark>
+        <name>Alpha Square</name>
+        <description><![CDATA[<b>bold</b> <img src="https://tracker.example/x.png">]]></description>
+        <styleUrl>#icon-22</styleUrl>
+        <Point><coordinates>12.5,41.9,0</coordinates></Point>
+      </Placemark>
+      <Placemark>
+        <name>Beta Harbour</name>
+        <styleUrl>#icon-22</styleUrl>
+        <Point><coordinates>14.25,40.85,0</coordinates></Point>
+      </Placemark>
+      <Placemark>
+        <name>Nowhere</name>
+      </Placemark>
+    </Folder>
+  </Document>
+</kml>

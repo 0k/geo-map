@@ -1,0 +1,144 @@
+#+TITLE: @0k/geo-map
+
+* Purpose
+
+A framework-free TypeScript map widget that shows the tracks and places of
+a *KMZ*, *KML*, *GPX* or *GeoJSON* file over free, OpenStreetMap-based
+basemaps.  Leaflet 1.9.4, ~@tmcw/togeojson~ 7.1.3 and ~fflate~ 0.8.3 are
+pinned EXACTLY and *bundled*: a consumer needs no other dependency, and
+the bundle runs on Chromium 91 (old Android WebViews).
+
+The widget knows no file path, URL, or transport for the data.  A host
+supplies the file bytes; this package owns parsing, rendering, layout,
+popups, the item list, and teardown.  The only network traffic it causes
+is basemap tiles: it never fetches the icons a KML file references.  MIT
+licensed.
+
+* Install the local artifact
+
+Run ~npm run pack~ here; it builds and writes
+~artifacts/0k-geo-map-<version>.tgz~ without publishing.  Consumers
+install the tarball as a committed ~file:~ dependency (see *Delivery*).
+
+#+begin_src typescript
+import { createGeoMap, detectFormat, type GeoMapHost } from '@0k/geo-map';
+import '@0k/geo-map/style.css';   // explicit: includes Leaflet's stylesheet
+
+const host: GeoMapHost = {
+  // Raw bytes.  The host owns the endpoint and its authorisation.
+  loadFile: async (signal) => (await fetch('/api/file?path=…', { signal })).arrayBuffer(),
+  renderDescription: (text) => mySanitisedHtml(text),  // optional, MUST be safe HTML
+  initialBasemap: localStorage.mapBasemap,             // optional
+  onBasemapChange: (id) => { localStorage.mapBasemap = id; },
+  onClose: () => collapseMyShell(),                    // optional: ✕ pressed
+};
+
+const handle = createGeoMap(rootElement, host, { format: detectFormat(name)!, label: 'Ridge loop' });
+await handle.open();      // load bytes → parse → mount Leaflet
+handle.destroy();         // release everything (idempotent)
+#+end_src
+
+The element handed to ~createGeoMap~ receives the ~gm-root~ class; the
+widget owns its content between ~open()~ and ~destroy()~/~close()~.
+
+* Host contract
+
+| Callback            | Required | Purpose                                                               |
+|---------------------+----------+-----------------------------------------------------------------------|
+| ~loadFile~          | yes      | Resolve the file's bytes (abortable).                                 |
+| ~renderDescription~ | no       | SAFE HTML for an item description; default is plain text.            |
+| ~basemaps~          | no       | Basemaps offered in the menu, first is the default (~DEFAULT_BASEMAPS~). |
+| ~initialBasemap~    | no       | Id to start on; unknown ids are ignored.                              |
+| ~onBasemapChange~   | no       | The user picked another basemap.                                      |
+| ~fullscreenPortal~  | no       | Container for the full-screen overlay (default ~document.body~).     |
+| ~wideHost~          | no       | Scrolling ancestor the ~wide~ layout spans (default: root's parent).  |
+| ~onLayoutChange~    | no       | ~inline~ / ~wide~ / ~full~ changed (e.g. to own a history entry).     |
+| ~onClose~           | no       | ✕ pressed; the widget has already destroyed itself.                   |
+
+The handle: ~open~, ~retry~, ~close~, ~destroy~, ~setLayout~ / ~getLayout~,
+~isPortalled~, ~setBasemap~ / ~basemap~, ~focusItem(id)~, ~fit()~, and the
+parsed ~document~ and Leaflet ~leaflet~ map while mounted.
+
+* Formats
+
+~detectFormat(name)~ maps ~.kmz~, ~.kml~, ~.gpx~ and ~.geojson~ (any case)
+to a format; ~parseGeoFile(bytes, format)~ returns a ~GeoDocument~:
+
+- ~name~ / ~description~: the KML ~Document~ (or top ~Folder~), the GPX
+  ~metadata~, or a GeoJSON top-level ~name~.
+- ~items~: one per feature with a geometry, in file order.  ~kind~ is
+  ~track~ (lines, including Google My Tracks ~gx:Track~ / ~gx:MultiTrack~),
+  ~place~ (points) or ~area~ (polygons).  Each item has its ~name~, raw
+  ~description~, ~lengthMeters~ (tracks), ~start~ / ~end~ timestamps when
+  the file records time, and the colour the file asks for (KML
+  ~LineStyle~).  Placemarks without geometry are dropped.
+- ~bounds~: south / west / north / east of everything.
+
+A KMZ is a zip: its ~doc.kml~ is read, else the shallowest ~.kml~.  The
+entry's inflated size is checked against ~maxUncompressedBytes~ (64 MiB by
+default) *before* inflating it.  Every failure throws ~GeoParseError~ with
+a message naming the problem (not a zip, no ~.kml~ inside, not well-formed
+XML, wrong root element, not GeoJSON, no tracks or places); the widget
+shows it as ~Cannot show this map: <reason>~.  A failed ~loadFile~ shows
+~Failed to load map: <reason>~ with a Retry button.
+
+* Display
+
+- Toolbar: title (host label, else the file's name), summary
+  (~1 track · 2 places~), basemap menu (hidden with a single basemap),
+  ⌖ show everything, ⇔ wide, ⛶ full screen, ✕ close.
+- The view is fitted to all items (never closer than zoom 16).  Tracks are
+  lines in the file's colour or the theme's; their first and last points
+  get small green / red dots.  Places are SVG circle markers.
+- A collapsed list under the map names every item with its length,
+  duration and start time; clicking one zooms to it and opens its popup.
+- Popups show the name, the same details, and the description.
+- Full screen portals the root into ~host.fullscreenPortal()~, Escape or ⛶
+  brings it back in place.
+
+* Basemaps
+
+~BASEMAPS~ holds the presets; ~DEFAULT_BASEMAPS~ offers all four, OSM
+first.  All are built from OpenStreetMap data (ODbL):
+
+| Id            | Service                                        | Max zoom |
+|---------------+------------------------------------------------+----------|
+| ~osm~         | ~tile.openstreetmap.org~ (OSMF)                |       19 |
+| ~opentopomap~ | ~tile.opentopomap.org~ (CC-BY-SA)              |       17 |
+| ~cyclosm~     | ~tile-cyclosm.openstreetmap.fr~ (OSM France)   |       20 |
+| ~osm-hot~     | ~tile.openstreetmap.fr/hot~ (HOT, OSM France)  |       19 |
+
+The widget follows the services' tile usage policies by construction: the
+attribution is always visible, it never prefetches or bulk-downloads, never
+asks beyond a service's ~maxZoom~, and lets the browser send its normal
+User-Agent and Referer (~strict-origin-when-cross-origin~).  Showing a file
+reveals the tile coordinates around it to the chosen service; a host that
+must avoid that can supply its own ~basemaps~ pointing at a caching proxy.
+
+* Theme
+
+Every rule hangs from ~.gm-root~; override the ~--gm-*~ variables there
+(~--gm-surface~, ~--gm-text~, ~--gm-track~, ~--gm-place~, ~--gm-area~,
+~--gm-start~, ~--gm-end~, ~--gm-map-height~, buttons, popup colours, and
+~--gm-inset-*~ for full-screen safe areas).
+
+* Development
+
+#+begin_src sh
+npm install
+npm run check   # unit tests, typecheck, build, Chrome 91 audit, demo build,
+                # real-Chrome acceptance (test/browser.py, tiles stubbed)
+#+end_src
+
+Tests use only the synthetic fixtures in ~test/fixtures/~ (the KMZ is
+zipped at test time).
+
+* Delivery
+
+No registry.  Consumers install a committed tarball
+(~vendor/0k-geo-map-<version>.tgz~, ~file:~ dependency) and are listed in
+the machine-local, git-ignored ~vendor-consumers.yml~ (format in
+~bin/vendor.mjs~).  ~npm run vendor~ validates every consumer, packs once,
+and installs the same tarball in all of them (or writes nothing);
+~npm run try~ overlays the working-tree build on each consumer's
+~node_modules~ for review without a version bump.

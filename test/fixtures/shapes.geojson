@@ -1,0 +1,4 @@
+{"type":"FeatureCollection","features":[
+ {"type":"Feature","properties":{"name":"Square"},"geometry":{"type":"Polygon","coordinates":[[[0,0],[1,0],[1,1],[0,1],[0,0]]]}},
+ {"type":"Feature","properties":{"name":"Pin"},"geometry":{"type":"Point","coordinates":[0.5,0.5]}}
+]}
