@@ -39,7 +39,7 @@ def run():
     origin = f"http://127.0.0.1:{server.server_address[1]}"
     try:
         with sync_playwright() as p:
-            browser = p.chromium.launch(channel="chrome", headless=True)
+            browser = p.chromium.launch(channel="chrome", headless=True, args=["--autoplay-policy=no-user-gesture-required"])
             try:
                 page = browser.new_page(viewport={"width": 900, "height": 900})
                 errors, external = [], []
@@ -142,6 +142,19 @@ def run():
                 desc.locator(".leaflet-popup-content .gm-popup-photo").click()
                 opened = page.evaluate("window.demoOpened")
                 check(opened and opened["index"] == 0 and [p["ref"] for p in opened["list"]] == ["geo.jpg", "placed.jpg"], f"clicking the popup photo hands the gallery to the host ({opened})")
+
+                # Linked media in a GPX waypoint popup.
+                gpx = page.locator('[data-file="trip.gpx"]')
+                gpx.locator("details.gm-legend summary").click()
+                gpx.locator(".gm-item", has_text="Voice recording").click()
+                audio = gpx.locator(".leaflet-popup-content .gm-popup-media audio")
+                audio.wait_for(timeout=3000)
+                played = audio.evaluate("a => a.play().then(() => new Promise(r => setTimeout(() => r({t: a.currentTime, d: a.duration, e: a.error}), 300))).catch(e => ({fail: String(e)}))")
+                check(played.get("d") and abs(played["d"] - 0.5) < 0.05 and played["t"] > 0, f"a linked recording plays from its popup ({played})")
+                gpx.locator(".gm-item", has_text="Picture").click()
+                gpx.locator(".leaflet-popup-content .gm-media-error").wait_for(timeout=3000)
+                err = gpx.locator(".leaflet-popup-content .gm-media-error").inner_text()
+                check(err == "view.JPG: cannot be shown", f"a missing linked image says so ({err})")
 
                 # Close.
                 kmz.locator(".gm-close").click()

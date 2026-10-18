@@ -216,3 +216,69 @@ describe('resize grip', () => {
     expect(map.style.height).toBe('');
   });
 });
+
+describe('linked media', () => {
+  const gpx = () => Promise.resolve(fixture('trip.gpx'));
+
+  function openPopup(root: HTMLElement, name: string): Element {
+    const entry = Array.from(root.querySelectorAll<HTMLButtonElement>('.gm-item')).find((b) => b.textContent?.includes(name))!;
+    entry.click();
+    return root.querySelector('.leaflet-popup-content')!;
+  }
+
+  it('plays a linked recording in the popup, resolving it through the host against its source file', async () => {
+    const mediaUrl = vi.fn((href: string, source: string | null, kind: string) => `/m/${kind}/${href}`);
+    const { root, handle } = mount({ loadFile: gpx, mediaUrl }, '', 'gpx');
+    await handle.open();
+    const popup = openPopup(root, 'Voice recording');
+    const audio = popup.querySelector<HTMLAudioElement>('.gm-popup-media audio')!;
+    expect(audio.getAttribute('src')).toBe('/m/audio/note.3gpp');
+    expect(audio.controls).toBe(true);
+    expect(audio.preload).toBe('none');
+    expect(mediaUrl).toHaveBeenCalledWith('note.3gpp', null, 'audio');
+  });
+
+  it('marks list entries that carry media', async () => {
+    const { root, handle } = mount({ loadFile: gpx, mediaUrl: (h) => h }, '', 'gpx');
+    await handle.open();
+    const marks = Array.from(root.querySelectorAll('.gm-item')).map((b) => `${b.querySelector('.gm-item-name')?.textContent}|${b.querySelector('.gm-item-media')?.textContent ?? ''}`);
+    expect(marks.sort()).toEqual(['Morning ride|', 'Picture|\u{1F5BC}', 'Voice recording|\u266A'].sort());
+  });
+
+  it('shows a linked image that opens in the host viewer, and an external link that opens in a new tab', async () => {
+    const openPhoto = vi.fn();
+    const { root, handle } = mount({ loadFile: gpx, mediaUrl: (h, _s, k) => `/m/${k}/${h}`, openPhoto }, '', 'gpx');
+    await handle.open();
+    const popup = openPopup(root, 'Picture');
+    const img = popup.querySelector<HTMLImageElement>('.gm-popup-media img')!;
+    expect(img.getAttribute('src')).toBe('/m/image/pics/view.JPG');
+    img.click();
+    expect(openPhoto).toHaveBeenCalledWith([{ ref: 'pics/view.JPG', url: '/m/image/pics/view.JPG', caption: 'view.JPG' }], 0);
+    const link = popup.querySelector<HTMLAnchorElement>('.gm-popup-media a')!;
+    expect([link.href, link.target, link.rel, link.textContent]).toEqual(['https://example.org/about', '_blank', 'noopener noreferrer', 'About']);
+  });
+
+  it('lets the host render the media itself', async () => {
+    const renderMedia = vi.fn((media: { kind: string }, url: string) => {
+      const el = document.createElement('my-player');
+      el.setAttribute('data-src', url);
+      return media.kind === 'audio' ? el : null;
+    });
+    const { root, handle } = mount({ loadFile: gpx, mediaUrl: (h) => `/x/${h}`, renderMedia }, '', 'gpx');
+    await handle.open();
+    const popup = openPopup(root, 'Voice recording');
+    expect(popup.querySelector('my-player')?.getAttribute('data-src')).toBe('/x/note.3gpp');
+    expect(popup.querySelector('audio')).toBeNull();
+  });
+
+  it('says why a medium is unavailable: no host resolver, or a recording that fails to play', async () => {
+    const bare = mount({ loadFile: gpx }, '', 'gpx');
+    await bare.handle.open();
+    expect(openPopup(bare.root, 'Voice recording').querySelector('.gm-popup-media')?.textContent).toBe('note.3gpp: not available here');
+    const { root, handle } = mount({ loadFile: gpx, mediaUrl: (h) => `/m/${h}` }, '', 'gpx');
+    await handle.open();
+    const audio = openPopup(root, 'Voice recording').querySelector('audio')!;
+    audio.dispatchEvent(new Event('error'));
+    expect(root.querySelector('.leaflet-popup-content .gm-media-error')?.textContent).toBe('note.3gpp: cannot be played');
+  });
+});

@@ -11,7 +11,7 @@
 import L from 'leaflet';
 import type { Position } from 'geojson';
 import { DEFAULT_BASEMAPS, type Basemap } from './basemaps';
-import { GeoParseError, parseGeoFile, type GeoDocument, type GeoItem, type MapKind } from './formats';
+import { GeoParseError, parseGeoFile, type GeoDocument, type GeoItem, type GeoMedia, type MapKind } from './formats';
 import { composeDescriptor, type RefLoader } from './compose';
 import { MapDescriptorError } from './descriptor';
 import { formatDuration, formatLength, lines, toBytes } from './geometry';
@@ -41,6 +41,19 @@ export interface GeoMapHost extends RefLoader {
   photoUrl?(ref: string): string;
   /** Show photo `index` of every photo of the map (e.g. a lightbox).  Default: open its URL in a new tab. */
   openPhoto?(photos: GeoMapPhoto[], index: number): void;
+  /**
+   * URL of a medium a feature links to (`href` as written in the file),
+   * resolved against `source` (the descriptor layer it comes from, or
+   * null for the map's own file).  Return null when it cannot be served.
+   * Without this hook, local media are listed as unavailable.
+   */
+  mediaUrl?(href: string, source: string | null, kind: 'audio' | 'image'): string | null;
+  /**
+   * Render a medium yourself (e.g. the host's own audio player); return
+   * null to let the widget render it.  The widget gives it the URL from
+   * `mediaUrl`.
+   */
+  renderMedia?(media: GeoMedia, url: string): HTMLElement | null;
   /** Render an item description to SAFE HTML.  Default: shown as plain text. */
   renderDescription?(text: string): string;
   /** Basemaps offered in the menu, first is the default.  Default: `DEFAULT_BASEMAPS`. */
@@ -172,6 +185,62 @@ function itemName(item: GeoItem): string {
 
 const latLng = (position: Position): L.LatLngExpression => [position[1]!, position[0]!];
 
+const MEDIA_MARK: Record<GeoMedia['kind'], string> = { audio: '\u266a', image: '\u{1F5BC}', web: '' };
+
+function mediaLabel(media: GeoMedia): string {
+  return media.text ?? (media.href.split('/').pop() || media.href);
+}
+
+function mediaElement(st: State, item: GeoItem, media: GeoMedia): HTMLElement {
+  const box = el('div', 'gm-popup-media');
+  box.setAttribute('data-kind', media.kind);
+  if (media.kind === 'web') {
+    const link = el('a', undefined, mediaLabel(media));
+    link.href = media.href;
+    link.target = '_blank';
+    link.rel = 'noopener noreferrer';
+    box.appendChild(link);
+    return box;
+  }
+  const url = st.host.mediaUrl?.(media.href, item.source, media.kind) ?? null;
+  if (!url) {
+    box.textContent = `${mediaLabel(media)}: not available here`;
+    return box;
+  }
+  const custom = st.host.renderMedia?.(media, url);
+  if (custom) {
+    box.appendChild(custom);
+    return box;
+  }
+  const fail = (what: string): void => {
+    const error = el('span', 'gm-media-error', `${mediaLabel(media)}: ${what}`);
+    box.textContent = '';
+    box.appendChild(error);
+  };
+  if (media.kind === 'audio') {
+    box.appendChild(el('span', 'gm-media-label', mediaLabel(media)));
+    const audio = el('audio');
+    audio.controls = true;
+    audio.preload = 'none';
+    audio.setAttribute('src', url);
+    audio.addEventListener('error', () => fail('cannot be played'));
+    box.appendChild(audio);
+  } else {
+    const img = el('img', 'gm-popup-photo');
+    img.alt = mediaLabel(media);
+    img.title = 'Open the image';
+    img.setAttribute('src', url);
+    img.addEventListener('error', () => fail('cannot be shown'));
+    img.addEventListener('click', () => {
+      const photo: GeoMapPhoto = { ref: media.href, url, caption: media.text };
+      if (st.host.openPhoto) st.host.openPhoto([photo], 0);
+      else window.open(url, '_blank', 'noopener');
+    });
+    box.appendChild(img);
+  }
+  return box;
+}
+
 /* ------------------------------------------------------------------ */
 /* Rendering                                                           */
 /* ------------------------------------------------------------------ */
@@ -225,6 +294,7 @@ function popupContent(st: State, item: GeoItem): HTMLElement {
     img.addEventListener('click', () => openPhoto(st, item));
     box.appendChild(img);
   }
+  for (const media of item.media) box.appendChild(mediaElement(st, item, media));
   if (item.description) {
     const desc = el('div', 'gm-popup-desc');
     if (st.host.renderDescription) desc.innerHTML = st.host.renderDescription(item.description);
@@ -365,6 +435,8 @@ function renderMap(st: State, doc: GeoDocument): void {
     const entry = button(`gm-item gm-item-${item.kind}`, `Show ${itemName(item)}`, '');
     entry.setAttribute('data-item-id', String(item.id));
     entry.appendChild(el('span', 'gm-item-name', itemName(item)));
+    const marks = Array.from(new Set(item.media.map((media) => MEDIA_MARK[media.kind]).filter(Boolean))).join('');
+    if (marks) entry.appendChild(el('span', 'gm-item-media', marks));
     const meta = itemMeta(item);
     if (meta) entry.appendChild(el('span', 'gm-item-meta', meta));
     li.appendChild(entry);

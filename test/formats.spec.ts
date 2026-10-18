@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { detectFormat, GeoParseError, parseGeoFile } from '../src/formats';
+import { detectFormat, GeoParseError, mediaKind, parseGeoFile } from '../src/formats';
 import { fixture, fixtureText, kmz } from './helpers';
 
 function names(doc: ReturnType<typeof parseGeoFile>): string[] {
@@ -59,11 +59,37 @@ describe('parseGeoFile', () => {
 
   it('reads GPX tracks and waypoints', () => {
     const doc = parseGeoFile(fixture('trip.gpx'), 'gpx');
-    expect(names(doc).sort()).toEqual(['place:Voice recording', 'track:Morning ride']);
+    expect(names(doc).sort()).toEqual(['place:Picture', 'place:Voice recording', 'track:Morning ride']);
     const track = doc.items.find((item) => item.kind === 'track')!;
     const place = doc.items.find((item) => item.kind === 'place')!;
     expect([track.start, track.end]).toEqual(['2020-06-02T10:00:00Z', '2020-06-02T10:20:00Z']);
     expect(place.start).toBe('2020-06-02T10:24:38Z');
+  });
+
+  it('keeps the media a GPX waypoint links to, typed by extension', () => {
+    const doc = parseGeoFile(fixture('trip.gpx'), 'gpx');
+    const media = (name: string) => doc.items.find((item) => item.name === name)!.media;
+    expect(media('Voice recording')).toEqual([{ href: 'note.3gpp', text: 'note.3gpp', kind: 'audio' }]);
+    expect(media('Picture')).toEqual([
+      { href: 'pics/view.JPG', text: 'view.JPG', kind: 'image' },
+      { href: 'https://example.org/about', text: 'About', kind: 'web' },
+    ]);
+    expect(media('Morning ride')).toEqual([]);
+  });
+
+  it('finds local media referenced from a KML description, ignoring remote and non-media links', () => {
+    const doc = parseGeoFile(fixture('places.kml'), 'kml');
+    expect(doc.items.find((item) => item.name === 'Beta Harbour')!.media).toEqual([
+      { href: 'audio/harbour.amr', text: 'clip', kind: 'audio' },
+      { href: '/abs/harbour.png', text: null, kind: 'image' },
+    ]);
+    // A remote image in a description is never collected (it would be fetched).
+    expect(doc.items.find((item) => item.name === 'Alpha Square')!.media).toEqual([]);
+  });
+
+  it('classifies media by extension', () => {
+    expect(['a.3gpp', 'a.3GP', 'a.amr', 'a.ogg', 'a.opus', 'a.mp3', 'a.m4a', 'a.wav', 'a.webm', 'a.jpg', 'a.jpeg', 'a.png', 'a.webp', 'a.gif', 'a.txt', 'a']
+      .map(mediaKind)).toEqual(['audio', 'audio', 'audio', 'audio', 'audio', 'audio', 'audio', 'audio', 'audio', 'image', 'image', 'image', 'image', 'image', null, null]);
   });
 
   it('reads GeoJSON, classifying polygons as areas', () => {

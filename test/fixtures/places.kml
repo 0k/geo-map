@@ -19,6 +19,7 @@
       </Placemark>
       <Placemark>
         <name>Beta Harbour</name>
+        <description><![CDATA[Listen: <a href="audio/harbour.amr">clip</a> <img src="/abs/harbour.png"> <a href="https://example.org/x.mp3">remote</a> <a href="notes.txt">notes</a>]]></description>
         <styleUrl>#icon-22</styleUrl>
         <Point><coordinates>14.25,40.85,0</coordinates></Point>
       </Placemark>

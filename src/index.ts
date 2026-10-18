@@ -7,12 +7,13 @@ export {
   parseGeoFile,
   detectFormat,
   detectMapKind,
+  mediaKind,
   GeoParseError,
   GEO_FORMATS,
   MAP_KINDS,
   DEFAULT_MAX_UNCOMPRESSED_BYTES,
 } from './formats';
-export type { GeoDocument, GeoFormat, GeoItem, GeoItemKind, GeoItemStyle, GeoPhoto, MapKind, ParseOptions } from './formats';
+export type { GeoDocument, GeoFormat, GeoItem, GeoItemKind, GeoItemStyle, GeoMedia, GeoPhoto, MapKind, ParseOptions } from './formats';
 export { parseMapDescriptor, MapDescriptorError } from './descriptor';
 export type { MapDescriptor, DescriptorLayer, DescriptorPhoto, DescriptorPlace, LatLon } from './descriptor';
 export { readPhotoMeta } from './exif';

@@ -43,7 +43,7 @@ async function layerPart(layer: DescriptorLayer, host: RefLoader, signal: AbortS
   if (!format) return { items: [], notes: [`${layer.file}: unsupported file type (expected .kmz, .kml, .gpx or .geojson)`], blobUrls: [] };
   try {
     const bytes = await host.loadRef!(layer.file, signal);
-    const items: Omit<GeoItem, 'id'>[] = parseGeoFile(bytes, format).items;
+    const items: Omit<GeoItem, 'id'>[] = parseGeoFile(bytes, format).items.map((item) => ({ ...item, source: layer.file }));
     if (layer.color) for (const item of items) item.style = { ...item.style, color: layer.color, opacity: 1 };
     const tracks = items.filter((item) => item.kind === 'track');
     if (layer.name && tracks.length === 1) tracks[0]!.name = layer.name;
@@ -80,6 +80,8 @@ async function photoPart(photo: DescriptorPhoto, host: RefLoader, signal: AbortS
     start: meta.takenAt,
     end: meta.takenAt,
     style: {},
+    media: [],
+    source: null,
     photo: {
       ref: photo.path,
       url,
@@ -110,6 +112,8 @@ export async function composeDescriptor(text: string, host: RefLoader, signal: A
     start: null,
     end: null,
     style: {},
+    media: [],
+    source: null,
   }));
   const blobUrls = parts.flatMap((part) => part.blobUrls);
   const notes = parts.flatMap((part) => part.notes);

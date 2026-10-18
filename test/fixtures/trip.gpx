@@ -5,6 +5,11 @@
     <name><![CDATA[Voice recording]]></name>
     <link href="note.3gpp"><text>note.3gpp</text></link>
   </wpt>
+  <wpt lat="44.501" lon="11.502">
+    <name>Picture</name>
+    <link href="pics/view.JPG"><text>view.JPG</text></link>
+    <link href="https://example.org/about"><text>About</text></link>
+  </wpt>
   <trk>
     <name>Morning ride</name>
     <trkseg>

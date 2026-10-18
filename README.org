@@ -50,6 +50,8 @@ widget owns its content between ~open()~ and ~destroy()~/~close()~.
 | ~loadRef~           | descr.   | Bytes of a file a descriptor names; for photos, ~{maxBytes}~ asks for a prefix. |
 | ~photoUrl~          | no       | URL of a full-size photo (popup image, marker fallback).             |
 | ~openPhoto~         | no       | Show photo ~index~ of the map's photos (e.g. a lightbox); default: new tab. |
+| ~mediaUrl~          | no       | URL of a medium a feature links to, resolved against its source file. |
+| ~renderMedia~       | no       | Render a medium yourself (e.g. your audio player); null = default.   |
 | ~renderDescription~ | no       | SAFE HTML for an item description; default is plain text.            |
 | ~basemaps~          | no       | Basemaps offered in the menu, first is the default (~DEFAULT_BASEMAPS~). |
 | ~initialBasemap~    | no       | Id to start on; unknown ids are ignored.                              |
@@ -85,6 +87,27 @@ a message naming the problem (not a zip, no ~.kml~ inside, not well-formed
 XML, wrong root element, not GeoJSON, no tracks or places); the widget
 shows it as ~Cannot show this map: <reason>~.  A failed ~loadFile~ shows
 ~Failed to load map: <reason>~ with a Retry button.
+
+* Linked media
+
+A GPX waypoint's ~<link href>~ (OSMTracker voice notes, pictures) and the
+*local* ~<a href>~ / ~<img src>~ of a KML description become
+~GeoItem.media~ (~{href, text, kind}~, kind ~audio~ / ~image~ by
+extension, or ~web~ for an ~http(s)~ GPX link; ~mediaKind(href)~ is
+exported).  Remote media in a KML description are never collected: they
+would be fetched.  The popup shows each one:
+
+- the URL comes from ~host.mediaUrl(href, source, kind)~, where ~source~
+  is the descriptor layer the feature comes from (null: the map's own
+  file), so relative references resolve against the right folder;
+- audio: ~host.renderMedia(media, url)~ if it returns an element, else a
+  native ~<audio controls preload="none">~; image: a thumbnail that
+  opens through ~host.openPhoto~; ~web~: a new-tab link;
+- without ~mediaUrl~ a local medium reads ~<name>: not available here~;
+  a medium that fails to load reads ~cannot be played~ / ~cannot be
+  shown~.
+
+List entries carrying media end with ♪ / 🖼.
 
 * Descriptor maps
 

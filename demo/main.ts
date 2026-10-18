@@ -31,6 +31,22 @@ async function solidJpeg(color: string): Promise<Uint8Array> {
   return new Uint8Array(await blob.arrayBuffer());
 }
 
+/** A 0.5 s, 8 kHz mono WAV tone: a playable stand-in for a linked recording. */
+function toneWavUrl(): string {
+  const rate = 8000;
+  const samples = rate / 2;
+  const view = new DataView(new ArrayBuffer(44 + samples * 2));
+  const ascii = (at: number, text: string): void => { for (let i = 0; i < text.length; i += 1) view.setUint8(at + i, text.charCodeAt(i)); };
+  ascii(0, 'RIFF'); view.setUint32(4, 36 + samples * 2, true); ascii(8, 'WAVE'); ascii(12, 'fmt ');
+  view.setUint32(16, 16, true); view.setUint16(20, 1, true); view.setUint16(22, 1, true);
+  view.setUint32(24, rate, true); view.setUint32(28, rate * 2, true); view.setUint16(32, 2, true); view.setUint16(34, 16, true);
+  ascii(36, 'data'); view.setUint32(40, samples * 2, true);
+  for (let i = 0; i < samples; i += 1) view.setInt16(44 + i * 2, Math.round(8000 * Math.sin((2 * Math.PI * 440 * i) / rate)), true);
+  return URL.createObjectURL(new Blob([view.buffer], { type: 'audio/wav' }));
+}
+
+const TONE = toneWavUrl();
+
 const DESCRIPTOR = `title: Ridge trip
 layers:
   - file: track.kmz
@@ -77,6 +93,8 @@ window.demoReady = Promise.all(names.map((name) => {
     loadFile: () => bytes(name),
     loadRef: (ref) => bytes(ref),
     photoUrl: (ref) => `./${ref}`,
+    // The recording plays; the linked picture does not exist (error path).
+    mediaUrl: (href) => (href === 'note.3gpp' ? TONE : `./${href}`),
     openPhoto: (list, index) => { window.demoOpened = { list, index }; },
     renderDescription: (text) => text.replace(/</g, '&lt;'),
   }, { format: detectMapKind(name)!, label: name === 'map.yml' ? '' : name });

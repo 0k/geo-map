@@ -74,10 +74,10 @@ describe('descriptor maps', () => {
     const h = host();
     const { root, handle } = await mount(h);
     expect(text(root, '.gm-title-label')).toBe('Ridge trip');
-    expect(text(root, '.gm-summary')).toBe('2 tracks · 4 places · 2 photos');
+    expect(text(root, '.gm-summary')).toBe('2 tracks · 5 places · 2 photos');
     expect(handle.document?.items.map((i) => `${i.kind}:${i.name ?? ''}`)).toEqual([
       'place:Synthetic Ridge Loop (Start)', 'track:Synthetic Ridge Loop', 'place:Synthetic Ridge Loop (End)',
-      'track:Morning ride', 'place:Voice recording',
+      'track:Morning ride', 'place:Voice recording', 'place:Picture',
       'photo:Steps', 'photo:placed.jpg',
       'place:Hut',
     ]);
@@ -133,6 +133,14 @@ describe('descriptor maps', () => {
       ...FILES, 'map.yml': () => new TextEncoder().encode('layers: [{file: gone.kmz}]'),
     }));
     expect(text(empty.root, '.gm-status-text')).toBe('Cannot show this map: nothing could be shown (gone.kmz: File not found)');
+  });
+
+  it('resolves a layer waypoint\'s media against that layer file, not the descriptor', async () => {
+    const mediaUrl = vi.fn(() => '/m');
+    const { root } = await mount(host({ mediaUrl }));
+    const entry = Array.from(root.querySelectorAll<HTMLButtonElement>('.gm-item')).find((b) => b.textContent?.includes('Voice recording'))!;
+    entry.click();
+    expect(mediaUrl).toHaveBeenCalledWith('note.3gpp', 'ride.gpx', 'audio');
   });
 
   it('starts on the descriptor basemap, over the host preference', async () => {

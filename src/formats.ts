@@ -38,6 +38,69 @@ export interface GeoItemStyle {
   weight?: number;
 }
 
+/**
+ * A medium a feature links to: a GPX `<link href>`, or a local
+ * `<a href>` / `<img src>` in a KML description.  `href` is as written
+ * (usually relative to the map file); the host resolves it.
+ */
+export interface GeoMedia {
+  href: string;
+  text: string | null;
+  /** `web`: an http(s) page, opened in a new tab. */
+  kind: 'audio' | 'image' | 'web';
+}
+
+const AUDIO_EXTENSIONS = ['3gpp', '3gp', 'amr', 'ogg', 'oga', 'opus', 'mp3', 'm4a', 'aac', 'wav', 'webm', 'flac'];
+const IMAGE_EXTENSIONS = ['jpg', 'jpeg', 'png', 'webp', 'gif'];
+
+/** Media kind of a reference, from its extension (query / fragment ignored), or null. */
+export function mediaKind(href: string): 'audio' | 'image' | null {
+  const match = /\.([A-Za-z0-9]+)(?:[?#].*)?$/.exec(href);
+  const ext = match?.[1]?.toLowerCase() ?? '';
+  if (AUDIO_EXTENSIONS.includes(ext)) return 'audio';
+  if (IMAGE_EXTENSIONS.includes(ext)) return 'image';
+  return null;
+}
+
+const REMOTE = /^[a-z][a-z0-9+.-]*:/i;
+
+/** A GPX link: local media by extension, http(s) pages as web links, nothing else. */
+function gpxMedia(href: string, text: string | null): GeoMedia | null {
+  if (/^https?:/i.test(href)) return { href, text, kind: 'web' };
+  if (REMOTE.test(href)) return null;
+  const kind = mediaKind(href);
+  return kind ? { href, text, kind } : null;
+}
+
+/** Local media referenced from description HTML (never remote: it would be fetched). */
+function descriptionMedia(html: string): GeoMedia[] {
+  if (!/<(a|img)\b/i.test(html)) return [];
+  const doc = new DOMParser().parseFromString(html, 'text/html');
+  const out: GeoMedia[] = [];
+  for (const node of Array.from(doc.querySelectorAll('a[href], img[src]'))) {
+    const href = (node.getAttribute(node.localName === 'a' ? 'href' : 'src') ?? '').trim();
+    if (!href || REMOTE.test(href) || href.startsWith('//')) continue;
+    const kind = mediaKind(href);
+    if (!kind) continue;
+    out.push({ href, text: node.localName === 'a' ? clean(node.textContent) : clean(node.getAttribute('alt')), kind });
+  }
+  return out;
+}
+
+function mediaOf(props: Record<string, unknown>, description: string | null): GeoMedia[] {
+  const out: GeoMedia[] = [];
+  if (Array.isArray(props.links)) {
+    for (const link of props.links as { href?: unknown; text?: unknown }[]) {
+      const href = clean(link?.href);
+      const media = href ? gpxMedia(href, clean(link.text)) : null;
+      if (media) out.push(media);
+    }
+  }
+  if (description) out.push(...descriptionMedia(description));
+  const seen = new Set<string>();
+  return out.filter((media) => !seen.has(media.href) && (seen.add(media.href), true));
+}
+
 /** A photo shown on the map (descriptor maps only). */
 export interface GeoPhoto {
   /** The host reference the descriptor gave (`photos[].path`). */
@@ -69,6 +132,13 @@ export interface GeoItem {
   style: GeoItemStyle;
   /** Set for `kind === 'photo'`. */
   photo?: GeoPhoto;
+  /** Media the feature links to. */
+  media: GeoMedia[];
+  /**
+   * The file the feature comes from, as the host named it (a descriptor
+   * layer's `file`); null for the map's own file.  Media resolve against it.
+   */
+  source: string | null;
 }
 
 export interface GeoDocument {
@@ -234,15 +304,18 @@ export function toItems(features: readonly Feature<Geometry | null>[]): GeoItem[
     if (!geometry || !hasCoordinates(geometry)) continue;
     const props = (feature.properties ?? {}) as Record<string, unknown>;
     const kind = kindOf(geometry);
+    const description = textProp(props.description) ?? textProp(props.desc);
     items.push({
       id: items.length,
       kind,
       name: clean(props.name),
-      description: textProp(props.description) ?? textProp(props.desc),
+      description,
       geometry,
       lengthMeters: kind === 'track' ? itemLength(geometry) : null,
       ...timesOf(props),
       style: styleOf(props),
+      media: mediaOf(props, description),
+      source: null,
     });
   }
   return items;

@@ -31,6 +31,11 @@
 /* Fixed box: the popup has its final size before the photo loads, so Leaflet pans it fully into view. */
 .gm-root .gm-popup-photo{display:block;width:260px;max-width:100%;height:195px;margin:4px auto 0;border-radius:4px;cursor:zoom-in;object-fit:contain;background:rgba(0,0,0,0.06)}
 .gm-root .gm-item-photo::before{border-radius:3px;background:var(--gm-photo)}
+/* Media a feature links to (recordings, images, pages). */
+.gm-root .gm-popup-media{margin-top:6px;font-size:0.9em}
+.gm-root .gm-popup-media .gm-media-label{display:block;opacity:0.7;margin-bottom:2px;overflow-wrap:anywhere}
+.gm-root .gm-popup-media audio{display:block;width:100%;min-width:220px;height:36px}
+.gm-root .gm-media-error{color:#b42318}
 /* Parts of a descriptor that could not be shown. */
 .gm-root .gm-notes{margin:6px 0 0;padding:0 0 0 1.2em;font-size:0.85em;color:var(--gm-note)}
 .gm-root .gm-status{display:flex;align-items:center;gap:0.5em;padding:0.4em 0.2em;opacity:0.85}
@@ -45,6 +50,7 @@
 .gm-root .gm-item-track::before{border-radius:2px;height:0.25em;background:var(--gm-track)}
 .gm-root .gm-item-area::before{border-radius:2px;background:var(--gm-area)}
 .gm-root .gm-item-name{flex:1 1 auto;min-width:0;overflow-wrap:anywhere}
+.gm-root .gm-item-media{flex:0 0 auto;opacity:0.8}
 .gm-root .gm-item-meta{flex:0 0 auto;color:var(--gm-muted);font-size:0.9em;white-space:nowrap}
 /* Path colours: the file's own colour wins (`gm-styled`), otherwise the theme. */
 .gm-root path.gm-track:not(.gm-styled){stroke:var(--gm-track)}
