@@ -109,6 +109,21 @@ def run():
                 page.keyboard.press("Escape")
                 check(page.locator(".gm-portal").count() == 0 and kmz.locator(".gm-map").count() == 1, "Escape returns the map in place")
 
+                # Resize grip: drag the inline map taller, then double-click to reset.
+                grip = kmz.locator(".gm-resize")
+                g = grip.bounding_box()
+                page.mouse.move(g["x"] + 10, g["y"] + 10)
+                page.mouse.down()
+                page.mouse.move(g["x"] + 10, g["y"] + 160, steps=5)
+                page.mouse.up()
+                height = kmz.locator(".gm-map").bounding_box()["height"]
+                check(abs(height - 510) < 2, f"the grip drags the map 150px taller ({height})")
+                tiles = page.evaluate("document.querySelector('[data-file=\"track.kmz\"] .leaflet-container').clientHeight")
+                check(tiles == round(height), f"Leaflet follows the new size ({tiles})")
+                grip.dblclick()
+                height = kmz.locator(".gm-map").bounding_box()["height"]
+                check(abs(height - 360) < 1, f"double-click resets the height ({height})")
+
                 # Descriptor map: layers, photos, place, notes.
                 desc = page.locator('[data-file="map.yml"]')
                 check(desc.locator(".gm-title-label").inner_text() == "Ridge trip", "descriptor title")

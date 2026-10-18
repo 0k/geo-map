@@ -141,6 +141,9 @@ places:                            # hand-written pins
 - Popups show the name, the same details, and the description.
 - Full screen portals the root into ~host.fullscreenPortal()~, Escape or ⛶
   brings it back in place.
+- A grip in the inline map's bottom-right corner drags its height
+  between 200 px and 90 % of the viewport (mouse, pen or finger);
+  double-click resets it.  The height is not remembered.
 
 * Basemaps
 

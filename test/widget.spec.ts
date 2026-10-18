@@ -190,3 +190,29 @@ describe('drawing', () => {
     expect(root.querySelector('path.gm-track')?.getAttribute('stroke')).toBe('#ff0000');
   });
 });
+
+describe('resize grip', () => {
+  function drag(grip: Element, from: number, to: number): void {
+    grip.dispatchEvent(new MouseEvent('pointerdown', { bubbles: true, clientY: from, button: 0 }));
+    window.dispatchEvent(new MouseEvent('pointermove', { clientY: to }));
+    window.dispatchEvent(new MouseEvent('pointerup', { clientY: to }));
+  }
+
+  it('drags the inline map height between 200 px and 90 % of the viewport; double-click resets it', async () => {
+    Object.defineProperty(window, 'innerHeight', { value: 1000, configurable: true });
+    const { root, handle } = mount({ loadFile: trackKmz });
+    await handle.open();
+    const map = root.querySelector<HTMLElement>('.gm-map')!;
+    vi.spyOn(map, 'getBoundingClientRect').mockReturnValue({ height: 360 } as DOMRect);
+    const grip = root.querySelector('.gm-resize')!;
+    expect(grip.getAttribute('aria-label')).toBe('Resize map');
+    drag(grip, 500, 640);
+    expect(map.style.height).toBe('500px');
+    drag(grip, 500, 100);
+    expect(map.style.height).toBe('200px');
+    drag(grip, 100, 2000);
+    expect(map.style.height).toBe('900px');
+    grip.dispatchEvent(new MouseEvent('dblclick', { bubbles: true }));
+    expect(map.style.height).toBe('');
+  });
+});

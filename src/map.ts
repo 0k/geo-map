@@ -88,6 +88,9 @@ const FIT_PADDING: L.PointExpression = [24, 24];
 /** Never zoom closer than this when fitting (a single place). */
 const FIT_MAX_ZOOM = 16;
 const FALLBACK_ZOOM = 13;
+/** Inline height range the resize grip allows. */
+const MIN_MAP_HEIGHT = 200;
+const MAX_MAP_HEIGHT_RATIO = 0.9;
 /** Rotation to apply to a raw EXIF thumbnail, by orientation. */
 const THUMB_ROTATION: Record<number, number> = { 3: 180, 6: 90, 8: 270 };
 
@@ -112,6 +115,8 @@ interface State {
   destroyed: boolean;
   /** Object URLs (photo thumbnails) owned by the current document. */
   blobUrls: string[];
+  /** Ends an in-progress resize drag. */
+  endDrag: (() => void) | null;
 }
 
 function el<K extends keyof HTMLElementTagNameMap>(tag: K, className?: string, text?: string): HTMLElementTagNameMap[K] {
@@ -333,8 +338,17 @@ function renderMap(st: State, doc: GeoDocument): void {
   toolbar.appendChild(controls);
   root.appendChild(toolbar);
 
+  const mapWrap = el('div', 'gm-map-wrap');
   const mapEl = el('div', 'gm-map');
-  root.appendChild(mapEl);
+  mapWrap.appendChild(mapEl);
+  const grip = el('div', 'gm-resize');
+  grip.setAttribute('role', 'separator');
+  grip.setAttribute('aria-orientation', 'horizontal');
+  grip.setAttribute('aria-label', 'Resize map');
+  grip.title = 'Drag to resize, double-click to reset';
+  mapWrap.appendChild(grip);
+  root.appendChild(mapWrap);
+  wireResize(st, grip, mapEl);
 
   if (doc.notes.length) {
     const notes = el('ul', 'gm-notes');
@@ -381,6 +395,42 @@ function renderMap(st: State, doc: GeoDocument): void {
     });
     st.resize.observe(mapEl);
   }
+}
+
+/* ------------------------------------------------------------------ */
+/* Resize grip                                                         */
+/* ------------------------------------------------------------------ */
+
+function wireResize(st: State, grip: HTMLElement, mapEl: HTMLElement): void {
+  grip.addEventListener('pointerdown', (event: PointerEvent) => {
+    if (event.button !== 0 || st.layout === 'full') return;
+    event.preventDefault();
+    st.endDrag?.();
+    const startY = event.clientY;
+    const startHeight = mapEl.getBoundingClientRect().height;
+    const onMove = (move: PointerEvent): void => {
+      const max = window.innerHeight * MAX_MAP_HEIGHT_RATIO;
+      const height = Math.min(max, Math.max(MIN_MAP_HEIGHT, startHeight + move.clientY - startY));
+      mapEl.style.height = `${Math.round(height)}px`;
+      st.map?.invalidateSize({ animate: false });
+    };
+    const end = (): void => {
+      window.removeEventListener('pointermove', onMove);
+      window.removeEventListener('pointerup', end);
+      window.removeEventListener('pointercancel', end);
+      st.root.removeAttribute('data-resizing');
+      if (st.endDrag === end) st.endDrag = null;
+    };
+    st.endDrag = end;
+    st.root.setAttribute('data-resizing', '1');
+    window.addEventListener('pointermove', onMove);
+    window.addEventListener('pointerup', end);
+    window.addEventListener('pointercancel', end);
+  });
+  grip.addEventListener('dblclick', () => {
+    mapEl.style.height = '';
+    st.map?.invalidateSize({ animate: false });
+  });
 }
 
 /* ------------------------------------------------------------------ */
@@ -460,6 +510,7 @@ function releaseBlobs(st: State): void {
 function teardownMap(st: State): void {
   st.controller?.abort();
   st.controller = null;
+  st.endDrag?.();
   releaseBlobs(st);
   st.resize?.disconnect();
   st.resize = null;
@@ -571,6 +622,7 @@ export function createGeoMap(root: HTMLElement, host: GeoMapHost, options: GeoMa
     fitted: false,
     destroyed: false,
     blobUrls: [],
+    endDrag: null,
     onClick: () => {},
     onChange: () => {},
   };

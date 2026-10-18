@@ -16,6 +16,15 @@
 .gm-root .gm-basemap{height:var(--gm-btn-size);color:var(--gm-btn-fg);background:var(--gm-btn-bg);border:1px solid var(--gm-btn-hover);border-radius:6px;font:inherit;font-size:0.8rem;padding:0 0.3em}
 .gm-root[data-layout='full'] .gm-wide{display:none}
 .gm-root .gm-map{height:var(--gm-map-height);border-radius:6px;overflow:hidden;background:#dcdcdc}
+/* Resize grip: bottom-right corner of the inline map, drag to change its height. */
+.gm-root .gm-map-wrap{position:relative}
+.gm-root .gm-resize{position:absolute;right:0;bottom:0;z-index:1001;width:20px;height:20px;cursor:ns-resize;touch-action:none;border-top-left-radius:6px;border-bottom-right-radius:6px;background-color:var(--gm-btn-bg);background-image:linear-gradient(135deg,transparent 0 45%,rgba(255,255,255,0.75) 45% 52%,transparent 52% 64%,rgba(255,255,255,0.75) 64% 71%,transparent 71% 83%,rgba(255,255,255,0.75) 83% 90%,transparent 90%)}
+.gm-root .gm-resize:hover,.gm-root[data-resizing] .gm-resize{background-color:var(--gm-btn-active)}
+/* Keep the attribution clear of the grip. */
+.gm-root .leaflet-bottom.leaflet-right{right:20px}
+.gm-root[data-layout='full'] .leaflet-bottom.leaflet-right{right:0}
+.gm-root[data-resizing]{user-select:none;-webkit-user-select:none}
+.gm-root[data-layout='full'] .gm-resize{display:none}
 /* Photo markers: the photo's own thumbnail, round, white-ringed. */
 .gm-root .gm-photo-marker{border-radius:50%;overflow:hidden;border:2px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,0.5);background:#333}
 .gm-root .gm-photo-marker .gm-photo-thumb{display:block;width:100%;height:100%;object-fit:cover}
@@ -54,6 +63,7 @@
 .gm-root[data-layout='wide']{position:relative;z-index:3;max-width:none;background:var(--gm-surface)}
 /* Full screen: a fixed overlay portalled out of the host's stacking contexts. */
 .gm-root[data-layout='full']{position:fixed;inset:0;z-index:10000;margin:0;max-width:none;width:auto;height:100vh;border:0;border-radius:0;padding:calc(8px + var(--gm-inset-top)) calc(10px + var(--gm-inset-right)) calc(8px + var(--gm-inset-bottom)) calc(10px + var(--gm-inset-left));background:var(--gm-surface);display:flex;flex-direction:column;overflow:hidden}
-.gm-root[data-layout='full'] .gm-map{flex:1 1 0;height:auto;min-height:0}
+.gm-root[data-layout='full'] .gm-map-wrap{flex:1 1 0;min-height:0;display:flex;flex-direction:column}
+.gm-root[data-layout='full'] .gm-map{flex:1 1 0;height:auto!important;min-height:0}
 .gm-root[data-layout='full'] .gm-legend{flex:0 0 auto;max-height:35vh;overflow:auto}
 body.gm-fullscreen-open{overflow:hidden}
