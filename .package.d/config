@@ -1,0 +1,6 @@
+NAME="@0k/geo-map"
+DESCRIPTION="A host-fed, framework-free map widget (Leaflet 1.9) that shows KMZ / KML / GPX / GeoJSON tracks and places over free basemaps."
+EMAIL="valentin.lab@kalysto.org"
+AUTHOR="Valentin Lab"
+AUTHOR_EMAIL="$AUTHOR <$EMAIL>"
+FILES="package.json package-lock.json"
