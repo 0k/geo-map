@@ -11,16 +11,36 @@
 import L from 'leaflet';
 import type { Position } from 'geojson';
 import { DEFAULT_BASEMAPS, type Basemap } from './basemaps';
-import { GeoParseError, parseGeoFile, type GeoDocument, type GeoFormat, type GeoItem } from './formats';
-import { formatDuration, formatLength, lines } from './geometry';
+import { GeoParseError, parseGeoFile, type GeoDocument, type GeoItem, type MapKind } from './formats';
+import { composeDescriptor, type RefLoader } from './compose';
+import { MapDescriptorError } from './descriptor';
+import { formatDuration, formatLength, lines, toBytes } from './geometry';
 
 export const ROOT_CLASS = 'gm-root';
 
 export type GeoMapLayout = 'inline' | 'wide' | 'full';
 
-export interface GeoMapHost {
-  /** Raw bytes of the file. */
+/** A photo as handed to `host.openPhoto`. */
+export interface GeoMapPhoto {
+  ref: string;
+  url: string | null;
+  caption: string | null;
+}
+
+export interface GeoMapHost extends RefLoader {
+  /** Raw bytes of the file (the geo file itself, or the descriptor). */
   loadFile(signal: AbortSignal): Promise<ArrayBuffer | Uint8Array>;
+  /**
+   * Bytes of a file a descriptor refers to (`layers[].file`,
+   * `photos[].path`), resolved by the host.  For photos `maxBytes` asks
+   * for a bounded prefix (the EXIF block); returning more is fine.
+   * Required for descriptors with layers or photos.
+   */
+  loadRef?(ref: string, signal: AbortSignal, options?: { maxBytes?: number }): Promise<ArrayBuffer | Uint8Array>;
+  /** URL of a full-size photo (marker fallback and popup image). */
+  photoUrl?(ref: string): string;
+  /** Show photo `index` of every photo of the map (e.g. a lightbox).  Default: open its URL in a new tab. */
+  openPhoto?(photos: GeoMapPhoto[], index: number): void;
   /** Render an item description to SAFE HTML.  Default: shown as plain text. */
   renderDescription?(text: string): string;
   /** Basemaps offered in the menu, first is the default.  Default: `DEFAULT_BASEMAPS`. */
@@ -38,7 +58,7 @@ export interface GeoMapHost {
 }
 
 export interface GeoMapOptions {
-  format: GeoFormat;
+  format: MapKind;
   /** Title; defaults to the file's own name. */
   label?: string;
 }
@@ -68,6 +88,8 @@ const FIT_PADDING: L.PointExpression = [24, 24];
 /** Never zoom closer than this when fitting (a single place). */
 const FIT_MAX_ZOOM = 16;
 const FALLBACK_ZOOM = 13;
+/** Rotation to apply to a raw EXIF thumbnail, by orientation. */
+const THUMB_ROTATION: Record<number, number> = { 3: 180, 6: 90, 8: 270 };
 
 interface State {
   root: HTMLElement;
@@ -88,6 +110,8 @@ interface State {
   /** True once the view was fitted against a laid-out container. */
   fitted: boolean;
   destroyed: boolean;
+  /** Object URLs (photo thumbnails) owned by the current document. */
+  blobUrls: string[];
 }
 
 function el<K extends keyof HTMLElementTagNameMap>(tag: K, className?: string, text?: string): HTMLElementTagNameMap[K] {
@@ -113,9 +137,9 @@ function plural(count: number, word: string): string {
 export function summaryText(doc: GeoDocument): string {
   const count = (kind: GeoItem['kind']): number => doc.items.filter((item) => item.kind === kind).length;
   const parts: string[] = [];
-  if (count('track')) parts.push(plural(count('track'), 'track'));
-  if (count('area')) parts.push(plural(count('area'), 'area'));
-  if (count('place')) parts.push(plural(count('place'), 'place'));
+  for (const kind of ['track', 'area', 'place', 'photo'] as const) {
+    if (count(kind)) parts.push(plural(count(kind), kind));
+  }
   return parts.join(' · ');
 }
 
@@ -159,11 +183,43 @@ function renderStatus(st: State, message: string, error: boolean): void {
   st.root.appendChild(status);
 }
 
+function photoGallery(st: State): { photos: GeoMapPhoto[]; ids: number[] } {
+  const items = st.doc?.items.filter((item) => item.photo) ?? [];
+  return {
+    photos: items.map((item) => ({ ref: item.photo!.ref, url: item.photo!.url, caption: item.photo!.caption })),
+    ids: items.map((item) => item.id),
+  };
+}
+
+function openPhoto(st: State, item: GeoItem): void {
+  const { photos, ids } = photoGallery(st);
+  const index = ids.indexOf(item.id);
+  if (st.host.openPhoto) st.host.openPhoto(photos, index);
+  else if (item.photo?.url) window.open(item.photo.url, '_blank', 'noopener');
+}
+
+function thumbImage(item: GeoItem, className: string): HTMLImageElement {
+  const img = el('img', className);
+  img.alt = itemName(item);
+  img.setAttribute('src', item.photo?.thumbUrl ?? '');
+  const turn = item.photo?.thumbNeedsOrientation ? THUMB_ROTATION[item.photo.orientation ?? 1] : undefined;
+  if (turn) img.style.transform = `rotate(${turn}deg)`;
+  return img;
+}
+
 function popupContent(st: State, item: GeoItem): HTMLElement {
   const box = el('div', 'gm-popup');
   box.appendChild(el('div', 'gm-popup-name', itemName(item)));
   const meta = itemMeta(item);
   if (meta) box.appendChild(el('div', 'gm-popup-meta', meta));
+  if (item.photo) {
+    const img = item.photo.url ? el('img', 'gm-popup-photo') : thumbImage(item, 'gm-popup-photo');
+    if (item.photo.url) img.setAttribute('src', item.photo.url);
+    img.alt = itemName(item);
+    img.title = 'Open the photo';
+    img.addEventListener('click', () => openPhoto(st, item));
+    box.appendChild(img);
+  }
   if (item.description) {
     const desc = el('div', 'gm-popup-desc');
     if (st.host.renderDescription) desc.innerHTML = st.host.renderDescription(item.description);
@@ -183,6 +239,15 @@ function itemLayer(st: State, item: GeoItem): L.Layer {
     return options;
   };
   const group = L.featureGroup();
+  if (item.photo) {
+    const [lon, lat] = (item.geometry as { coordinates: number[] }).coordinates as [number, number];
+    const holder = el('div');
+    holder.appendChild(thumbImage(item, 'gm-photo-thumb'));
+    const icon = L.divIcon({ className: 'gm-photo-marker', html: holder.innerHTML, iconSize: [40, 40], iconAnchor: [20, 20], popupAnchor: [0, -20] });
+    group.addLayer(L.marker([lat, lon], { icon, title: itemName(item), alt: itemName(item) }));
+    group.bindPopup(() => popupContent(st, item), { maxWidth: 320, minWidth: 200, autoPanPadding: [16, 16] });
+    return group;
+  }
   // No `style` option: Leaflet would apply it to the place markers too.
   // Places get their options from `pointToLayer`; every other path is
   // styled below, before it is first rendered (the class is read then).
@@ -270,6 +335,13 @@ function renderMap(st: State, doc: GeoDocument): void {
 
   const mapEl = el('div', 'gm-map');
   root.appendChild(mapEl);
+
+  if (doc.notes.length) {
+    const notes = el('ul', 'gm-notes');
+    notes.setAttribute('role', 'status');
+    for (const note of doc.notes) notes.appendChild(el('li', undefined, note));
+    root.appendChild(notes);
+  }
 
   const legend = el('details', 'gm-legend');
   legend.appendChild(el('summary', 'gm-legend-summary', `List: ${summaryText(doc)}`));
@@ -380,9 +452,15 @@ function setLayout(st: State, layout: GeoMapLayout): void {
 /* Lifecycle                                                           */
 /* ------------------------------------------------------------------ */
 
+function releaseBlobs(st: State): void {
+  for (const url of st.blobUrls) URL.revokeObjectURL(url);
+  st.blobUrls = [];
+}
+
 function teardownMap(st: State): void {
   st.controller?.abort();
   st.controller = null;
+  releaseBlobs(st);
   st.resize?.disconnect();
   st.resize = null;
   if (st.layout !== 'inline') leaveLayout(st);
@@ -403,12 +481,27 @@ async function open(st: State): Promise<void> {
   try {
     const bytes = await st.host.loadFile(controller.signal);
     if (st.seq !== seq) return;
-    doc = parseGeoFile(bytes, st.options.format);
+    if (st.options.format === 'descriptor') {
+      const text = new TextDecoder('utf-8').decode(toBytes(bytes));
+      const composed = await composeDescriptor(text, st.host, controller.signal);
+      if (st.seq !== seq) {
+        for (const url of composed.blobUrls) URL.revokeObjectURL(url);
+        return;
+      }
+      st.blobUrls = composed.blobUrls;
+      doc = composed.doc;
+      const wanted = st.basemaps.find((basemap) => basemap.id === composed.basemap);
+      if (wanted) st.basemap = wanted;
+      else if (composed.basemap) doc.notes.push(`basemap "${composed.basemap}" is not offered`);
+    } else {
+      doc = parseGeoFile(bytes, st.options.format);
+    }
   } catch (error) {
     if (st.seq !== seq) return;
     st.controller = null;
     const reason = error instanceof Error ? error.message : String(error);
-    renderStatus(st, error instanceof GeoParseError ? `Cannot show this map: ${reason}` : `Failed to load map: ${reason}`, true);
+    const unshowable = error instanceof GeoParseError || error instanceof MapDescriptorError;
+    renderStatus(st, unshowable ? `Cannot show this map: ${reason}` : `Failed to load map: ${reason}`, true);
     return;
   }
   st.controller = null;
@@ -477,6 +570,7 @@ export function createGeoMap(root: HTMLElement, host: GeoMapHost, options: GeoMa
     resize: null,
     fitted: false,
     destroyed: false,
+    blobUrls: [],
     onClick: () => {},
     onChange: () => {},
   };

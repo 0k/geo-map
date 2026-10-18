@@ -102,3 +102,12 @@ export function formatDuration(ms: number): string {
   if (minutes < 60) return `${minutes} min`;
   return `${Math.floor(minutes / 60)} h ${String(minutes % 60).padStart(2, '0')}`;
 }
+
+/**
+ * Bytes as a `Uint8Array`, from either a typed array (of any realm: an
+ * iframe's or a test environment's `Uint8Array` fails `instanceof`) or an
+ * `ArrayBuffer`.
+ */
+export function toBytes(data: ArrayBuffer | Uint8Array): Uint8Array {
+  return ArrayBuffer.isView(data) ? new Uint8Array(data.buffer, data.byteOffset, data.byteLength) : new Uint8Array(data);
+}

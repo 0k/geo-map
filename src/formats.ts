@@ -9,11 +9,16 @@
 import { gpx, kml } from '@tmcw/togeojson';
 import { unzipSync } from 'fflate';
 import type { Feature, Geometry, Position } from 'geojson';
-import { boundsOf, itemLength, type GeoBounds } from './geometry';
+import { boundsOf, itemLength, toBytes, type GeoBounds } from './geometry';
 
 export type GeoFormat = 'kmz' | 'kml' | 'gpx' | 'geojson';
 
 export const GEO_FORMATS: readonly GeoFormat[] = ['kmz', 'kml', 'gpx', 'geojson'];
+
+/** What a map can be built from: one geo file, or a YAML descriptor combining several sources. */
+export type MapKind = GeoFormat | 'descriptor';
+
+export const MAP_KINDS: readonly MapKind[] = [...GEO_FORMATS, 'descriptor'];
 
 /** Ceiling on the inflated size of the `.kml` entry of a KMZ (zip-bomb guard). */
 export const DEFAULT_MAX_UNCOMPRESSED_BYTES = 64 * 1024 * 1024;
@@ -25,12 +30,26 @@ export class GeoParseError extends Error {
   }
 }
 
-export type GeoItemKind = 'track' | 'place' | 'area';
+export type GeoItemKind = 'track' | 'place' | 'area' | 'photo';
 
 export interface GeoItemStyle {
   color?: string;
   opacity?: number;
   weight?: number;
+}
+
+/** A photo shown on the map (descriptor maps only). */
+export interface GeoPhoto {
+  /** The host reference the descriptor gave (`photos[].path`). */
+  ref: string;
+  /** Full-size image URL from `host.photoUrl`, or null. */
+  url: string | null;
+  /** Small image for the marker: the embedded EXIF thumbnail, else `url`. */
+  thumbUrl: string | null;
+  /** True when `thumbUrl` is the raw EXIF thumbnail, whose pixels are not rotated. */
+  thumbNeedsOrientation: boolean;
+  orientation: number | null;
+  caption: string | null;
 }
 
 export interface GeoItem {
@@ -48,14 +67,18 @@ export interface GeoItem {
   end: string | null;
   /** Colours the file itself asks for. */
   style: GeoItemStyle;
+  /** Set for `kind === 'photo'`. */
+  photo?: GeoPhoto;
 }
 
 export interface GeoDocument {
-  format: GeoFormat;
+  format: MapKind;
   name: string | null;
   description: string | null;
   items: GeoItem[];
   bounds: GeoBounds;
+  /** Parts that could not be shown, each naming the source and the reason. */
+  notes: string[];
 }
 
 export interface ParseOptions {
@@ -75,8 +98,13 @@ export function detectFormat(name: string): GeoFormat | null {
   return match ? EXTENSIONS[match[1]!.toLowerCase()] ?? null : null;
 }
 
+/** `detectFormat`, plus `.yml` / `.yaml` as a descriptor. */
+export function detectMapKind(name: string): MapKind | null {
+  return /\.ya?ml$/i.test(name) ? 'descriptor' : detectFormat(name);
+}
+
 function asBytes(data: ArrayBuffer | Uint8Array): Uint8Array {
-  return data instanceof Uint8Array ? data : new Uint8Array(data);
+  return toBytes(data);
 }
 
 function decode(bytes: Uint8Array): string {
@@ -199,7 +227,7 @@ function styleOf(props: Record<string, unknown>): GeoItemStyle {
   return style;
 }
 
-function toItems(features: readonly Feature<Geometry | null>[]): GeoItem[] {
+export function toItems(features: readonly Feature<Geometry | null>[]): GeoItem[] {
   const items: GeoItem[] = [];
   for (const feature of features) {
     const geometry = feature.geometry;
@@ -270,5 +298,5 @@ export function parseGeoFile(data: ArrayBuffer | Uint8Array, format: GeoFormat, 
   }
   const items = toItems(features);
   if (!items.length) throw new GeoParseError('no tracks or places in this file');
-  return { format, name, description, items, bounds: boundsOf(items.map((item) => item.geometry)) };
+  return { format, name, description, items, bounds: boundsOf(items.map((item) => item.geometry)), notes: [] };
 }

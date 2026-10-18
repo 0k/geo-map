@@ -4,7 +4,8 @@
 
 A framework-free TypeScript map widget that shows the tracks and places of
 a *KMZ*, *KML*, *GPX* or *GeoJSON* file over free, OpenStreetMap-based
-basemaps.  Leaflet 1.9.4, ~@tmcw/togeojson~ 7.1.3 and ~fflate~ 0.8.3 are
+basemaps — or, from a small YAML *descriptor*, several such files plus
+geotagged photos and hand-written places on one map.  Leaflet 1.9.4, ~@tmcw/togeojson~ 7.1.3 and ~fflate~ 0.8.3 are
 pinned EXACTLY and *bundled*: a consumer needs no other dependency, and
 the bundle runs on Chromium 91 (old Android WebViews).
 
@@ -45,7 +46,10 @@ widget owns its content between ~open()~ and ~destroy()~/~close()~.
 
 | Callback            | Required | Purpose                                                               |
 |---------------------+----------+-----------------------------------------------------------------------|
-| ~loadFile~          | yes      | Resolve the file's bytes (abortable).                                 |
+| ~loadFile~          | yes      | Resolve the file's bytes, or the descriptor's (abortable).           |
+| ~loadRef~           | descr.   | Bytes of a file a descriptor names; for photos, ~{maxBytes}~ asks for a prefix. |
+| ~photoUrl~          | no       | URL of a full-size photo (popup image, marker fallback).             |
+| ~openPhoto~         | no       | Show photo ~index~ of the map's photos (e.g. a lightbox); default: new tab. |
 | ~renderDescription~ | no       | SAFE HTML for an item description; default is plain text.            |
 | ~basemaps~          | no       | Basemaps offered in the menu, first is the default (~DEFAULT_BASEMAPS~). |
 | ~initialBasemap~    | no       | Id to start on; unknown ids are ignored.                              |
@@ -81,6 +85,48 @@ a message naming the problem (not a zip, no ~.kml~ inside, not well-formed
 XML, wrong root element, not GeoJSON, no tracks or places); the widget
 shows it as ~Cannot show this map: <reason>~.  A failed ~loadFile~ shows
 ~Failed to load map: <reason>~ with a Retry button.
+
+* Descriptor maps
+
+~createGeoMap(root, host, { format: 'descriptor' })~ (~detectMapKind~ maps
+~.yml~ / ~.yaml~ to it) reads a YAML descriptor through ~loadFile~ and
+every file it names through ~loadRef~.  References are opaque to the
+package: the host resolves them (for example: relative to the descriptor's
+folder, absolute, or ~~/~).
+
+#+begin_src yaml
+title: Lake walk, May 2020   # map title (a host label wins)
+basemap: opentopomap               # optional; overrides the host's choice
+layers:                            # KMZ / KML / GPX / GeoJSON files
+  - file: tracks/lake-loop.kmz
+  - file: ride.gpx
+    color: '#2f7fe0'               # optional, overrides the file's colours
+    name: Morning ride             # optional, renames the file's single track
+photos:
+  - path: photos/IMG_1234.jpg      # placed from its EXIF GPS position
+    caption: Lakeside steps          # optional; default: the file name
+  - path: photos/IMG_1300.jpg
+    at: [45.01, 10.02]             # [lat, lon]; wins over the EXIF position
+places:                            # hand-written pins
+  - name: The shelter
+    at: [45.02, 10.01]
+    note: Picnic stop, **windy**.    # optional; rendered by renderDescription
+#+end_src
+
+- Keys are strict: an unknown key, a missing ~file~ / ~path~ / ~name~, a
+  bad colour or position fails the whole map with a message naming the
+  key (~layers[0]: unknown key "path" (expected file, color, name)~).
+- A part that cannot be shown does not: the rest of the map shows, and a
+  note under it names the part and why (~ride.gpx: File not found~,
+  ~IMG_1.jpg: no GPS position in the photo (add `at:`)~).  Only a
+  descriptor where nothing can be shown fails as a whole.
+- Photos: only the first 256 KiB of each is requested
+  (~PHOTO_HEADER_BYTES~), enough for its EXIF block: GPS position, time
+  taken, orientation, and the small embedded thumbnail, which becomes the
+  round marker (turned upright by its orientation).  Without an embedded
+  thumbnail the marker uses ~photoUrl~.  The popup shows the photo in a
+  fixed 260×195 box; clicking it calls ~openPhoto~ with every photo of
+  the map.  ~readPhotoMeta(bytes)~ is exported and never throws.
 
 * Display
 

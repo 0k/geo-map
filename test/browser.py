@@ -109,6 +109,25 @@ def run():
                 page.keyboard.press("Escape")
                 check(page.locator(".gm-portal").count() == 0 and kmz.locator(".gm-map").count() == 1, "Escape returns the map in place")
 
+                # Descriptor map: layers, photos, place, notes.
+                desc = page.locator('[data-file="map.yml"]')
+                check(desc.locator(".gm-title-label").inner_text() == "Ridge trip", "descriptor title")
+                check(desc.locator(".gm-summary").inner_text() == "1 track · 3 places · 2 photos", f"descriptor summary ({desc.locator('.gm-summary').inner_text()})")
+                stroke = desc.locator("path.gm-track").get_attribute("stroke")
+                check(stroke == "#2f7fe0", f"a layer colour overrides the file's ({stroke})")
+                notes = desc.locator(".gm-notes li").all_inner_texts()
+                check(notes == ["missing.jpg: File request failed: 404"], f"a missing photo is named in the notes ({notes})")
+                thumbs = desc.locator(".gm-photo-marker img.gm-photo-thumb")
+                check(thumbs.count() == 2, "both photos get a thumbnail marker")
+                natural = page.evaluate("Array.from(document.querySelectorAll('[data-file=\"map.yml\"] .gm-photo-thumb')).map(i => i.naturalWidth)")
+                check(natural == [64, 64], f"the embedded EXIF thumbnails decode ({natural})")
+                rot = thumbs.first.evaluate("i => i.style.transform")
+                check(rot == "rotate(90deg)", f"an orientation-6 thumbnail is turned upright ({rot})")
+                desc.locator(".gm-photo-marker").first.click()
+                desc.locator(".leaflet-popup-content .gm-popup-photo").click()
+                opened = page.evaluate("window.demoOpened")
+                check(opened and opened["index"] == 0 and [p["ref"] for p in opened["list"]] == ["geo.jpg", "placed.jpg"], f"clicking the popup photo hands the gallery to the host ({opened})")
+
                 # Close.
                 kmz.locator(".gm-close").click()
                 check(kmz.locator(".leaflet-container").count() == 0, "✕ removes the map")
