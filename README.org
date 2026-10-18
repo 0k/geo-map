@@ -41,7 +41,7 @@ handle.destroy();         // release everything (idempotent)
 #+end_src
 
 The element handed to ~createGeoMap~ receives the ~gm-root~ class; the
-widget owns its content between ~open()~ and ~destroy()~/~close()~.
+widget owns its content between ~open()~ and ~destroy()~ (or ~close()~).
 
 Importing the package also imports its stylesheets (Leaflet's and the
 widget's), so the host's bundler must handle CSS imports.  The widget's
@@ -123,7 +123,7 @@ package: the host resolves them (for example: relative to the descriptor's
 folder, absolute, or ~~/~).
 
 #+begin_src yaml
-title: Lake walk, May 2020   # map title (a host label wins)
+title: Lake walk, May 2020         # map title (a host label wins)
 basemap: opentopomap               # optional; overrides the host's choice
 layers:                            # KMZ / KML / GPX / GeoJSON files
   - file: tracks/lake-loop.kmz
@@ -132,13 +132,13 @@ layers:                            # KMZ / KML / GPX / GeoJSON files
     name: Morning ride             # optional, renames the file's single track
 photos:
   - path: photos/IMG_1234.jpg      # placed from its EXIF GPS position
-    caption: Lakeside steps          # optional; default: the file name
+    caption: Lakeside steps        # optional; default: the file name
   - path: photos/IMG_1300.jpg
     at: [45.01, 10.02]             # [lat, lon]; wins over the EXIF position
 places:                            # hand-written pins
   - name: The shelter
     at: [45.02, 10.01]
-    note: Picnic stop, **windy**.    # optional; rendered by renderDescription
+    note: Picnic stop, **windy**.  # optional; rendered by renderDescription
 #+end_src
 
 - Keys are strict: an unknown key, a missing ~file~ / ~path~ / ~name~, a
@@ -199,6 +199,23 @@ Every rule hangs from ~.gm-root~; override the ~--gm-*~ variables there
 ~--gm-start~, ~--gm-end~, ~--gm-map-height~, buttons, popup colours, and
 ~--gm-inset-*~ for full-screen safe areas).
 
+* Other exports
+
+Besides ~createGeoMap~ and the parsers above, the package exports the
+helpers and constants the widget itself uses:
+
+| Export                           | What it is                                                          |
+|----------------------------------+---------------------------------------------------------------------|
+| ~ROOT_CLASS~                     | ~'gm-root'~, the class every widget style hangs from                |
+| ~GEO_FORMATS~ / ~MAP_KINDS~      | The formats ~parseGeoFile~ reads; the same plus ~'descriptor'~      |
+| ~DEFAULT_MAX_UNCOMPRESSED_BYTES~ | Default KMZ inflation limit (64 MiB)                                |
+| ~parseMapDescriptor(text)~       | Parses and validates a YAML descriptor; throws ~MapDescriptorError~ |
+| ~summaryText(document)~          | The header summary, e.g. ~1 track · 2 places~                       |
+| ~itemMeta(item)~                 | The list / popup line: length, duration and start time              |
+| ~haversine(a, b)~                | Great-circle distance between two ~[lon, lat]~ positions, metres    |
+| ~formatLength(m)~                | ~850 m~, ~1.9 km~, ~42 km~                                          |
+| ~formatDuration(ms)~             | ~45 min~, ~1 h 05~                                                  |
+
 * Development
 
 #+begin_src sh
@@ -210,5 +227,7 @@ npm run check   # unit tests, typecheck, build, Chrome 91 audit, demo build,
 Tests use only the synthetic fixtures in ~test/fixtures/~ (the KMZ is
 zipped at test time).
 
-To try an unreleased change in a host, install the checkout there without
-saving it: ~npm install --no-save <path-to-geo-map>~.
+To try an unreleased change in a host, run ~npm install~ in the checkout
+first (its ~prepare~ script builds ~dist/~ with the development
+dependencies), then install the checkout in the host without saving it:
+~npm install --no-save <path-to-geo-map>~.

@@ -40,5 +40,5 @@ parsing, Leaflet, layout, popups, the item list and teardown.
 ## Delivery
 
 Published to npm as `@0k/geo-map` with `pkg`, from a git tag.  To review
-an unreleased change in a host, run `npm install --no-save
-<path-to-checkout>` there.
+an unreleased change in a host, run `npm install` in the checkout first,
+then `npm install --no-save <path-to-checkout>` in the host.
