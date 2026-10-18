@@ -2,9 +2,7 @@ node_modules/
 dist/
 demo-dist/
 *.tgz
-artifacts/
 AGENTS.local.md
 CLAUDE.local.md
-vendor-consumers.yml
 /README.md
 /.pkg/

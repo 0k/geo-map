@@ -35,15 +35,10 @@ parsing, Leaflet, layout, popups, the item list and teardown.
 - Tests use the synthetic fixtures in `test/fixtures/` only; never commit
   real personal tracks.
 - Verify with `npm run check` (unit tests, typecheck, build, Chrome 91
-  audit, demo build, real-Chrome acceptance with tiles stubbed); produce
-  the tarball with `npm run pack`; deliver with `npm run vendor`.  Do not
-  commit into consumer repositories from this package.
+  audit, demo build, real-Chrome acceptance with tiles stubbed).
 
 ## Delivery
 
-No registry.  Consumers install a committed tarball
-(`vendor/0k-geo-map-<version>.tgz`, `file:` dependency).  To SHIP a
-reviewed change: bump the version here, run `npm run vendor`, then review
-and commit the resulting diff in each consumer.  `npm run try` overlays the
-working-tree build onto each consumer's `node_modules` to review an
-uncommitted change in the real host without a version bump.
+Published to npm as `@0k/geo-map` with `pkg`, from a git tag.  To review
+an unreleased change in a host, run `npm install --no-save
+<path-to-checkout>` there.

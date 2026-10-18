@@ -51,10 +51,7 @@
     "demo:build": "vite build --config demo/vite.config.ts",
     "test:browser": "python3 test/browser.py",
     "check:chrome91": "node scripts/check-chrome91.mjs",
-    "check": "npm run test && npm run typecheck && npm run build && npm run check:chrome91 && npm run demo:build && npm run test:browser",
-    "pack": "node scripts/pack.mjs",
-    "vendor": "node bin/vendor.mjs",
-    "try": "node bin/vendor.mjs --try"
+    "check": "npm run test && npm run typecheck && npm run build && npm run check:chrome91 && npm run demo:build && npm run test:browser"
   },
   "dependencies": {
     "@tmcw/togeojson": "7.1.3",

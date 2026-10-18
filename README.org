@@ -17,11 +17,11 @@ popups, the item list, and teardown.  The only network traffic it causes
 is basemap tiles: it never fetches the icons a KML file references.  MIT
 licensed.
 
-* Install the local artifact
+* Install
 
-Run ~npm run pack~ here; it builds and writes
-~artifacts/0k-geo-map-<version>.tgz~ without publishing.  Consumers
-install the tarball as a committed ~file:~ dependency (see *Delivery*).
+#+begin_src sh
+npm install @0k/geo-map
+#+end_src
 
 #+begin_src typescript
 import { createGeoMap, detectFormat, type GeoMapHost } from '@0k/geo-map';
@@ -210,12 +210,5 @@ npm run check   # unit tests, typecheck, build, Chrome 91 audit, demo build,
 Tests use only the synthetic fixtures in ~test/fixtures/~ (the KMZ is
 zipped at test time).
 
-* Delivery
-
-No registry.  Consumers install a committed tarball
-(~vendor/0k-geo-map-<version>.tgz~, ~file:~ dependency) and are listed in
-the machine-local, git-ignored ~vendor-consumers.yml~ (format in
-~bin/vendor.mjs~).  ~npm run vendor~ validates every consumer, packs once,
-and installs the same tarball in all of them (or writes nothing);
-~npm run try~ overlays the working-tree build on each consumer's
-~node_modules~ for review without a version bump.
+To try an unreleased change in a host, install the checkout there without
+saving it: ~npm install --no-save <path-to-geo-map>~.
