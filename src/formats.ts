@@ -9,7 +9,7 @@
 import { gpx, kml } from '@tmcw/togeojson';
 import { unzipSync } from 'fflate';
 import type { Feature, Geometry, Position } from 'geojson';
-import { boundsOf, itemLength, toBytes, type GeoBounds } from './geometry';
+import { boundsOf, itemLength, toBytes, type GeoBounds } from './geometry.js';
 
 export type GeoFormat = 'kmz' | 'kml' | 'gpx' | 'geojson';
 

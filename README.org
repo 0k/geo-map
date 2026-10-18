@@ -5,9 +5,11 @@
 A framework-free TypeScript map widget that shows the tracks and places of
 a *KMZ*, *KML*, *GPX* or *GeoJSON* file over free, OpenStreetMap-based
 basemaps — or, from a small YAML *descriptor*, several such files plus
-geotagged photos and hand-written places on one map.  Leaflet 1.9.4, ~@tmcw/togeojson~ 7.1.3 and ~fflate~ 0.8.3 are
-pinned EXACTLY and *bundled*: a consumer needs no other dependency, and
-the bundle runs on Chromium 91 (old Android WebViews).
+geotagged photos and hand-written places on one map.  Its runtime
+libraries — Leaflet 1.9.4, ~@tmcw/togeojson~ 7.1.3, ~fflate~ 0.8.3 and
+~yaml~ 2.9.1 — are dependencies pinned EXACTLY, resolved by the host's
+bundler.  The package's ES2020 output and those libraries run on
+Chromium 91 (old Android WebViews).
 
 The widget knows no file path, URL, or transport for the data.  A host
 supplies the file bytes; this package owns parsing, rendering, layout,
@@ -23,7 +25,6 @@ install the tarball as a committed ~file:~ dependency (see *Delivery*).
 
 #+begin_src typescript
 import { createGeoMap, detectFormat, type GeoMapHost } from '@0k/geo-map';
-import '@0k/geo-map/style.css';   // explicit: includes Leaflet's stylesheet
 
 const host: GeoMapHost = {
   // Raw bytes.  The host owns the endpoint and its authorisation.
@@ -41,6 +42,10 @@ handle.destroy();         // release everything (idempotent)
 
 The element handed to ~createGeoMap~ receives the ~gm-root~ class; the
 widget owns its content between ~open()~ and ~destroy()~/~close()~.
+
+Importing the package also imports its stylesheets (Leaflet's and the
+widget's), so the host's bundler must handle CSS imports.  The widget's
+own rules are also exported as ~@0k/geo-map/style.css~.
 
 * Host contract
 

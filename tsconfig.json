@@ -12,7 +12,8 @@
     "types": ["vitest/globals", "node"],
     "skipLibCheck": true,
     "noUncheckedIndexedAccess": true,
-    "exactOptionalPropertyTypes": true
+    "exactOptionalPropertyTypes": true,
+    "noEmit": true
   },
   "include": ["src/**/*.ts", "test/**/*.ts", "demo/**/*.ts", "vite.config.ts"]
 }

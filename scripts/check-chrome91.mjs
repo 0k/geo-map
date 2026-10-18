@@ -1,18 +1,34 @@
-import { readdirSync, readFileSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import { extname, join } from "node:path";
 import ts from "typescript";
 
-const roots = ["dist"];
+// What a host's bundler ships: this package's ``tsc`` output, and the
+// browser ESM entry of each pinned runtime library (the file its
+// ``exports`` / ``main`` resolves to for a browser build).  The host's
+// own build targets Chrome 91; this audit proves the code it receives
+// needs no API or syntax newer than that.
+const roots = [
+  "dist",
+  "node_modules/leaflet/dist/leaflet-src.js",
+  "node_modules/@tmcw/togeojson/dist/togeojson.es.mjs",
+  "node_modules/fflate/esm/browser.js",
+  "node_modules/yaml/browser",
+];
 const files = [];
 function collect(path) {
+  if (!existsSync(path)) throw new Error(`${path}: missing (run npm install and npm run build first)`);
+  if (!statSync(path).isDirectory()) {
+    files.push(path);
+    return;
+  }
   for (const entry of readdirSync(path, { withFileTypes: true })) {
     const child = join(path, entry.name);
     if (entry.isDirectory()) collect(child);
-    else if ([".js", ".cjs"].includes(extname(entry.name))) files.push(child);
+    else if ([".js", ".mjs"].includes(extname(entry.name))) files.push(child);
   }
 }
 for (const root of roots) collect(root);
-if (!files.length) throw new Error("No emitted JavaScript bundles found");
+if (!files.some((file) => file.startsWith("dist"))) throw new Error("No emitted JavaScript found in dist/");
 
 for (const file of files) {
   const source = readFileSync(file, "utf8");
@@ -38,4 +54,4 @@ for (const file of files) {
     if (pattern.test(source)) throw new Error(`${file}: ${api} requires a browser newer than Chrome 91`);
   }
 }
-console.log(`Chrome 91 syntax inspection passed for ${files.length} emitted bundles`);
+console.log(`Chrome 91 syntax inspection passed for ${files.length} files (dist/ and the pinned libraries)`);

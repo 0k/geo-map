@@ -10,11 +10,11 @@
 
 import L from 'leaflet';
 import type { Position } from 'geojson';
-import { DEFAULT_BASEMAPS, type Basemap } from './basemaps';
-import { GeoParseError, parseGeoFile, type GeoDocument, type GeoItem, type GeoMedia, type MapKind } from './formats';
-import { composeDescriptor, type RefLoader } from './compose';
-import { MapDescriptorError } from './descriptor';
-import { formatDuration, formatLength, lines, toBytes } from './geometry';
+import { DEFAULT_BASEMAPS, type Basemap } from './basemaps.js';
+import { GeoParseError, parseGeoFile, type GeoDocument, type GeoItem, type GeoMedia, type MapKind } from './formats.js';
+import { composeDescriptor, type RefLoader } from './compose.js';
+import { MapDescriptorError } from './descriptor.js';
+import { formatDuration, formatLength, lines, toBytes } from './geometry.js';
 
 export const ROOT_CLASS = 'gm-root';
 

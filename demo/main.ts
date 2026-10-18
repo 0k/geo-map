@@ -5,9 +5,6 @@
 import { strToU8, zipSync } from 'fflate';
 import { syntheticJpeg } from '../test/jpeg';
 import { createGeoMap, detectMapKind, type GeoMapHandle, type GeoMapPhoto } from '../src/index';
-// Hosts import the stylesheet explicitly, as `@0k/geo-map/style.css`.
-import 'leaflet/dist/leaflet.css';
-import '../src/style.css';
 
 declare global {
   interface Window {

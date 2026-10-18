@@ -7,10 +7,10 @@
  * the rest.  Only a descriptor with nothing showable fails as a whole.
  */
 
-import { parseMapDescriptor, type DescriptorLayer, type DescriptorPhoto } from './descriptor';
-import { detectFormat, GeoParseError, parseGeoFile, type GeoDocument, type GeoItem } from './formats';
-import { readPhotoMeta } from './exif';
-import { boundsOf } from './geometry';
+import { parseMapDescriptor, type DescriptorLayer, type DescriptorPhoto } from './descriptor.js';
+import { detectFormat, GeoParseError, parseGeoFile, type GeoDocument, type GeoItem } from './formats.js';
+import { readPhotoMeta } from './exif.js';
+import { boundsOf } from './geometry.js';
 
 /** Bytes of a photo read for its EXIF block: far more than the 64 KiB EXIF limit plus a JFIF header. */
 export const PHOTO_HEADER_BYTES = 256 * 1024;

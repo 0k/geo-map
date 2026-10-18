@@ -8,7 +8,7 @@
  * malformed or cut short yields null for that field.
  */
 
-import { toBytes } from './geometry';
+import { toBytes } from './geometry.js';
 
 export interface PhotoMeta {
   /** Decimal degrees, negative south. */

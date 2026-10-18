@@ -1,32 +1,31 @@
 {
   "name": "@0k/geo-map",
   "version": "0.3.0",
-  "description": "A host-fed, framework-free map widget (Leaflet 1.9, bundled) that shows KMZ / KML / GPX / GeoJSON tracks and places over free basemaps.",
+  "description": "A host-fed, framework-free map widget (Leaflet 1.9) that shows KMZ / KML / GPX / GeoJSON tracks and places over free basemaps.",
   "license": "MIT",
   "type": "module",
   "sideEffects": [
-    "*.css"
+    "*.css",
+    "./dist/index.js",
+    "./src/index.ts"
   ],
   "files": [
     "dist",
     "README.org",
     "LICENSE"
   ],
-  "main": "./dist/index.cjs",
-  "module": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
-      "import": "./dist/index.js",
-      "require": "./dist/index.cjs"
+      "default": "./dist/index.js"
     },
     "./style.css": "./dist/style.css"
   },
   "scripts": {
     "test": "vitest run",
     "typecheck": "tsc --noEmit",
-    "build": "vite build && tsc -p tsconfig.build.json",
+    "build": "node -e \"require('node:fs').rmSync('dist',{recursive:true,force:true})\" && tsc -p tsconfig.build.json && node -e \"require('node:fs').copyFileSync('src/style.css','dist/style.css')\"",
     "demo:build": "vite build --config demo/vite.config.ts",
     "test:browser": "python3 test/browser.py",
     "check:chrome91": "node scripts/check-chrome91.mjs",
@@ -35,17 +34,19 @@
     "vendor": "node bin/vendor.mjs",
     "try": "node bin/vendor.mjs --try"
   },
-  "devDependencies": {
+  "dependencies": {
     "@tmcw/togeojson": "7.1.3",
     "@types/geojson": "7946.0.16",
     "@types/leaflet": "1.9.22",
-    "@types/node": "22.10.5",
     "fflate": "0.8.3",
-    "jsdom": "25.0.1",
     "leaflet": "1.9.4",
+    "yaml": "2.9.1"
+  },
+  "devDependencies": {
+    "@types/node": "22.10.5",
+    "jsdom": "25.0.1",
     "typescript": "5.7.3",
     "vite": "5.4.14",
-    "vitest": "2.1.8",
-    "yaml": "2.9.1"
+    "vitest": "2.1.8"
   }
 }

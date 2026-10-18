@@ -1,7 +1,7 @@
 # @0k/geo-map
 
 Reusable, framework-free TypeScript map widget (Leaflet 1.9.4, exact-pinned
-and bundled) that shows KMZ / KML / GPX / GeoJSON tracks and places over
+dependency) that shows KMZ / KML / GPX / GeoJSON tracks and places over
 free OpenStreetMap-based basemaps.  Hosts own fetching, authorisation,
 description rendering (sanitised HTML) and theme; the package owns
 parsing, Leaflet, layout, popups, the item list and teardown.
@@ -20,13 +20,16 @@ parsing, Leaflet, layout, popups, the item list and teardown.
   `maxZoom`, and HTTPS.  Never add prefetching, bulk download, or a tile
   URL from a proprietary provider (Google, Bing, Mapbox, Esri, HERE...);
   `test/basemaps.spec.ts` enforces this.
-- Leaflet, `@tmcw/togeojson` and `fflate` stay pinned EXACTLY and bundled,
-  hence `devDependencies`: a consumer installs nothing else and there is
-  no peer dependency.  The build target is `chrome91` and
-  `npm run check:chrome91` audits the emitted bundle (Android WebView 91).
+- The runtime libraries (Leaflet, `@tmcw/togeojson`, `fflate`, `yaml`, plus
+  `@types/leaflet` and `@types/geojson`, which the published declarations
+  import) are `dependencies` pinned EXACTLY; nothing is bundled and there
+  is no peer dependency.  `tsc` emits ES2020 ESM only; the host's bundler
+  targets Chrome 91, and `npm run check:chrome91` audits `dist/` and each
+  pinned library's browser entry (Android WebView 91).
 - KMZ inflation is bounded (`maxUncompressedBytes`) BEFORE inflating.
 - Every widget style hangs from `.gm-root`; colours are `--gm-*` variables
-  declared on `.gm-root`.  Leaflet's own stylesheet is bundled verbatim.
+  declared on `.gm-root`.  `src/index.ts` imports Leaflet's own stylesheet
+  unmodified.
 - Teardown (`destroy()`) is idempotent and releases the fetch, the Leaflet
   map, observers, listeners and the full-screen portal.
 - Tests use the synthetic fixtures in `test/fixtures/` only; never commit
