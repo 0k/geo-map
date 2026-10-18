@@ -1,6 +1,6 @@
 {
   "name": "@0k/geo-map",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "A host-fed, framework-free map widget (Leaflet 1.9, bundled) that shows KMZ / KML / GPX / GeoJSON tracks and places over free basemaps.",
   "license": "MIT",
   "type": "module",
