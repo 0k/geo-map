@@ -96,7 +96,7 @@ export interface GeoMapHandle {
   readonly leaflet: L.Map | null;
 }
 
-/** Inline map height before the first fit; CSS owns the real value. */
+/** Padding around the content when fitting the view, pixels. */
 const FIT_PADDING: L.PointExpression = [24, 24];
 /** Never zoom closer than this when fitting (a single place). */
 const FIT_MAX_ZOOM = 16;
@@ -448,7 +448,7 @@ function renderMap(st: State, doc: GeoDocument): void {
   const map = L.map(mapEl, {
     zoomControl: true,
     attributionControl: true,
-    // Pinch / wheel zoom stay; the transcript keeps scrolling with one finger.
+    // Wheel zoom is centred on the map; one finger pans it, two pinch-zoom.
     scrollWheelZoom: 'center',
   });
   map.attributionControl.setPrefix('<a href="https://leafletjs.com">Leaflet</a>');

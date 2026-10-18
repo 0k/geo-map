@@ -65,7 +65,7 @@
 .gm-root .gm-popup-desc{max-height:40vh;overflow:auto;overflow-wrap:anywhere}
 .gm-root .gm-popup-desc img{max-width:100%}
 .gm-root .leaflet-control-attribution{font-size:10px}
-/* Wide: the transcript column's full width (geometry set by the widget). */
+/* Wide: the host column's full width (geometry set by the widget). */
 .gm-root[data-layout='wide']{position:relative;z-index:3;max-width:none;background:var(--gm-surface)}
 /* Full screen: a fixed overlay portalled out of the host's stacking contexts. */
 .gm-root[data-layout='full']{position:fixed;inset:0;z-index:10000;margin:0;max-width:none;width:auto;height:100vh;border:0;border-radius:0;padding:calc(8px + var(--gm-inset-top)) calc(10px + var(--gm-inset-right)) calc(8px + var(--gm-inset-bottom)) calc(10px + var(--gm-inset-left));background:var(--gm-surface);display:flex;flex-direction:column;overflow:hidden}
